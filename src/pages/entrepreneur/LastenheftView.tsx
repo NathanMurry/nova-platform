@@ -1,0 +1,387 @@
+import { useState, useEffect } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import {
+    ArrowLeft,
+    FileText,
+    Euro,
+    Users,
+    Building2,
+    Target,
+    CheckCircle,
+    AlertCircle,
+    MessageSquare,
+    Send,
+    Download,
+    Loader2
+} from 'lucide-react';
+import { loadLastenheft, addComment, updateLastenheft } from '../../lib/lastenheft';
+
+interface Requirement {
+    id: string;
+    category: string;
+    description: string;
+    priority: 'high' | 'medium' | 'low';
+}
+
+interface Comment {
+    id: string;
+    author: 'entrepreneur' | 'nova';
+    content: string;
+    timestamp: string;
+}
+
+interface LastenheftData {
+    id: string;
+    title: string;
+    problem_summary: string;
+    requirements: Requirement[];
+    industry: string;
+    team_size: string;
+    budget_range: string;
+    desired_outcome: string;
+    status: string;
+    comments: Comment[];
+    created_at: string;
+}
+
+const LastenheftView = () => {
+    const { id } = useParams<{ id: string }>();
+    const navigate = useNavigate();
+
+    const [lastenheft, setLastenheft] = useState<LastenheftData | null>(null);
+    const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+    const [newComment, setNewComment] = useState('');
+    const [isSendingComment, setIsSendingComment] = useState(false);
+    const [isApproving, setIsApproving] = useState(false);
+
+    useEffect(() => {
+        const fetchLastenheft = async () => {
+            if (!id) {
+                setError('Keine Lastenheft-ID angegeben');
+                setIsLoading(false);
+                return;
+            }
+
+            try {
+                const data = await loadLastenheft(id);
+                if (data) {
+                    setLastenheft(data as LastenheftData);
+                } else {
+                    setError('Lastenheft nicht gefunden');
+                }
+            } catch (err) {
+                setError('Fehler beim Laden des Lastenhefts');
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        fetchLastenheft();
+    }, [id]);
+
+    const handleAddComment = async () => {
+        if (!id || !newComment.trim()) return;
+
+        setIsSendingComment(true);
+        try {
+            const updated = await addComment(id, 'entrepreneur', newComment);
+            if (updated) {
+                setLastenheft(updated as LastenheftData);
+                setNewComment('');
+            }
+        } finally {
+            setIsSendingComment(false);
+        }
+    };
+
+    const handleApprove = async () => {
+        if (!id) return;
+
+        setIsApproving(true);
+        try {
+            const updated = await updateLastenheft(id, { status: 'approved' });
+            if (updated) {
+                setLastenheft(updated as LastenheftData);
+            }
+        } finally {
+            setIsApproving(false);
+        }
+    };
+
+    const getPriorityColor = (priority: string) => {
+        switch (priority) {
+            case 'high': return 'bg-red-100 text-red-700 border-red-200';
+            case 'medium': return 'bg-amber-100 text-amber-700 border-amber-200';
+            case 'low': return 'bg-green-100 text-green-700 border-green-200';
+            default: return 'bg-gray-100 text-gray-700 border-gray-200';
+        }
+    };
+
+    const getPriorityLabel = (priority: string) => {
+        switch (priority) {
+            case 'high': return 'Hoch';
+            case 'medium': return 'Mittel';
+            case 'low': return 'Niedrig';
+            default: return priority;
+        }
+    };
+
+    const getStatusBadge = (status: string) => {
+        switch (status) {
+            case 'draft':
+                return <span className="px-3 py-1 bg-gray-100 text-gray-600 rounded-full text-sm">Entwurf</span>;
+            case 'review':
+                return <span className="px-3 py-1 bg-amber-100 text-amber-600 rounded-full text-sm">In Prüfung</span>;
+            case 'approved':
+                return <span className="px-3 py-1 bg-green-100 text-green-600 rounded-full text-sm flex items-center gap-1">
+                    <CheckCircle className="w-4 h-4" /> Freigegeben
+                </span>;
+            default:
+                return <span className="px-3 py-1 bg-gray-100 text-gray-600 rounded-full text-sm">{status}</span>;
+        }
+    };
+
+    if (isLoading) {
+        return (
+            <div className="min-h-screen bg-gradient-to-b from-amber-50 to-white flex items-center justify-center">
+                <div className="flex items-center gap-3">
+                    <Loader2 className="w-8 h-8 text-amber-500 animate-spin" />
+                    <span className="text-lg text-gray-600">Lastenheft wird geladen...</span>
+                </div>
+            </div>
+        );
+    }
+
+    if (error || !lastenheft) {
+        return (
+            <div className="min-h-screen bg-gradient-to-b from-amber-50 to-white flex items-center justify-center">
+                <div className="text-center">
+                    <AlertCircle className="w-16 h-16 text-red-400 mx-auto mb-4" />
+                    <h1 className="text-2xl font-bold text-gray-800 mb-2">Fehler</h1>
+                    <p className="text-gray-600 mb-6">{error || 'Lastenheft nicht gefunden'}</p>
+                    <button
+                        onClick={() => navigate('/')}
+                        className="px-6 py-3 bg-amber-500 text-white rounded-lg hover:bg-amber-600 transition-colors"
+                    >
+                        Zur Startseite
+                    </button>
+                </div>
+            </div>
+        );
+    }
+
+    return (
+        <div className="min-h-screen bg-gradient-to-b from-amber-50 to-white">
+            {/* Header */}
+            <header className="bg-white border-b border-amber-100 px-6 py-4 sticky top-0 z-10 shadow-sm">
+                <div className="max-w-4xl mx-auto flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                        <button
+                            onClick={() => navigate('/')}
+                            className="p-2 hover:bg-amber-50 rounded-full transition-colors text-gray-500"
+                        >
+                            <ArrowLeft className="w-5 h-5" />
+                        </button>
+                        <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 bg-gradient-to-br from-amber-400 to-orange-400 rounded-lg flex items-center justify-center text-white">
+                                <FileText className="w-5 h-5" />
+                            </div>
+                            <div>
+                                <h1 className="text-lg font-bold text-gray-900">Lastenheft</h1>
+                                <p className="text-sm text-gray-500">
+                                    Erstellt am {new Date(lastenheft.created_at).toLocaleDateString('de-DE')}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                    {getStatusBadge(lastenheft.status)}
+                </div>
+            </header>
+
+            {/* Content */}
+            <main className="max-w-4xl mx-auto px-6 py-8">
+                {/* Titel & Zusammenfassung */}
+                <section className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 mb-6">
+                    <h2 className="text-2xl font-bold text-gray-900 mb-4">{lastenheft.title}</h2>
+                    <p className="text-gray-600 leading-relaxed">{lastenheft.problem_summary}</p>
+                </section>
+
+                {/* Quick Stats */}
+                <section className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                    <div className="bg-white rounded-xl p-4 border border-gray-100 shadow-sm">
+                        <div className="flex items-center gap-2 text-gray-500 mb-1">
+                            <Building2 className="w-4 h-4" />
+                            <span className="text-sm">Branche</span>
+                        </div>
+                        <p className="font-semibold text-gray-900">{lastenheft.industry || 'Nicht angegeben'}</p>
+                    </div>
+                    <div className="bg-white rounded-xl p-4 border border-gray-100 shadow-sm">
+                        <div className="flex items-center gap-2 text-gray-500 mb-1">
+                            <Users className="w-4 h-4" />
+                            <span className="text-sm">Team</span>
+                        </div>
+                        <p className="font-semibold text-gray-900">{lastenheft.team_size || 'Nicht angegeben'}</p>
+                    </div>
+                    <div className="bg-white rounded-xl p-4 border border-gray-100 shadow-sm">
+                        <div className="flex items-center gap-2 text-gray-500 mb-1">
+                            <Euro className="w-4 h-4" />
+                            <span className="text-sm">Budget</span>
+                        </div>
+                        <p className="font-semibold text-gray-900">{lastenheft.budget_range || 'Nicht angegeben'}</p>
+                    </div>
+                    <div className="bg-white rounded-xl p-4 border border-gray-100 shadow-sm">
+                        <div className="flex items-center gap-2 text-gray-500 mb-1">
+                            <Target className="w-4 h-4" />
+                            <span className="text-sm">Ziel</span>
+                        </div>
+                        <p className="font-semibold text-gray-900 truncate">{lastenheft.desired_outcome || 'Nicht angegeben'}</p>
+                    </div>
+                </section>
+
+                {/* Anforderungen */}
+                <section className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 mb-6">
+                    <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+                        <CheckCircle className="w-5 h-5 text-amber-500" />
+                        Anforderungen
+                    </h3>
+                    <div className="space-y-3">
+                        {lastenheft.requirements && lastenheft.requirements.length > 0 ? (
+                            lastenheft.requirements.map((req, idx) => (
+                                <div
+                                    key={req.id || idx}
+                                    className="flex items-start gap-4 p-4 bg-gray-50 rounded-xl"
+                                >
+                                    <span className="text-sm font-mono text-gray-400 mt-0.5">
+                                        {req.id || `REQ-${String(idx + 1).padStart(3, '0')}`}
+                                    </span>
+                                    <div className="flex-1">
+                                        <div className="flex items-center gap-2 mb-1">
+                                            <span className="text-sm font-medium text-gray-500">{req.category}</span>
+                                            <span className={`px-2 py-0.5 text-xs rounded-full border ${getPriorityColor(req.priority)}`}>
+                                                {getPriorityLabel(req.priority)}
+                                            </span>
+                                        </div>
+                                        <p className="text-gray-800">{req.description}</p>
+                                    </div>
+                                </div>
+                            ))
+                        ) : (
+                            <p className="text-gray-500 text-center py-4">Keine Anforderungen definiert</p>
+                        )}
+                    </div>
+                </section>
+
+                {/* Kommentare */}
+                <section className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 mb-6">
+                    <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+                        <MessageSquare className="w-5 h-5 text-amber-500" />
+                        Kommentare & Anmerkungen
+                    </h3>
+
+                    {/* Kommentar-Liste */}
+                    <div className="space-y-4 mb-4">
+                        {lastenheft.comments && lastenheft.comments.length > 0 ? (
+                            lastenheft.comments.map((comment) => (
+                                <div
+                                    key={comment.id}
+                                    className={`p-4 rounded-xl ${comment.author === 'entrepreneur'
+                                        ? 'bg-amber-50 border border-amber-100'
+                                        : 'bg-gray-50 border border-gray-100'
+                                        }`}
+                                >
+                                    <div className="flex items-center gap-2 mb-2">
+                                        <span className="font-medium text-gray-900">
+                                            {comment.author === 'entrepreneur' ? 'Sie' : 'Nova'}
+                                        </span>
+                                        <span className="text-sm text-gray-400">
+                                            {new Date(comment.timestamp).toLocaleString('de-DE')}
+                                        </span>
+                                    </div>
+                                    <p className="text-gray-700">{comment.content}</p>
+                                </div>
+                            ))
+                        ) : (
+                            <p className="text-gray-500 text-center py-4">
+                                Noch keine Kommentare. Haben Sie Anmerkungen?
+                            </p>
+                        )}
+                    </div>
+
+                    {/* Neuer Kommentar */}
+                    <div className="flex gap-3">
+                        <input
+                            type="text"
+                            value={newComment}
+                            onChange={(e) => setNewComment(e.target.value)}
+                            onKeyDown={(e) => e.key === 'Enter' && handleAddComment()}
+                            placeholder="Schreiben Sie einen Kommentar..."
+                            className="flex-1 px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-amber-400 focus:ring-2 focus:ring-amber-100 outline-none"
+                        />
+                        <button
+                            onClick={handleAddComment}
+                            disabled={!newComment.trim() || isSendingComment}
+                            className="px-4 py-3 bg-amber-500 text-white rounded-xl hover:bg-amber-600 transition-colors disabled:opacity-50"
+                        >
+                            {isSendingComment ? (
+                                <Loader2 className="w-5 h-5 animate-spin" />
+                            ) : (
+                                <Send className="w-5 h-5" />
+                            )}
+                        </button>
+                    </div>
+                </section>
+
+                {/* Aktions-Buttons */}
+                <section className="flex flex-col sm:flex-row gap-4">
+                    {lastenheft.status !== 'approved' && (
+                        <button
+                            onClick={handleApprove}
+                            disabled={isApproving}
+                            className="flex-1 flex items-center justify-center gap-2 px-6 py-4 bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-xl font-semibold hover:from-green-600 hover:to-emerald-600 transition-all shadow-lg disabled:opacity-50"
+                        >
+                            {isApproving ? (
+                                <Loader2 className="w-5 h-5 animate-spin" />
+                            ) : (
+                                <CheckCircle className="w-5 h-5" />
+                            )}
+                            Lastenheft freigeben
+                        </button>
+                    )}
+                    <button
+                        onClick={() => {/* TODO: PDF Export */ }}
+                        className="flex-1 flex items-center justify-center gap-2 px-6 py-4 bg-white border-2 border-gray-200 text-gray-700 rounded-xl font-semibold hover:bg-gray-50 transition-all"
+                    >
+                        <Download className="w-5 h-5" />
+                        Als PDF herunterladen
+                    </button>
+                </section>
+
+                {/* Info-Box */}
+                <section className="mt-8 p-6 bg-amber-50 border border-amber-200 rounded-2xl">
+                    <h4 className="font-bold text-amber-800 mb-2">So geht's weiter</h4>
+                    <ul className="text-amber-700 space-y-2">
+                        <li className="flex items-start gap-2">
+                            <span className="font-bold">1.</span>
+                            <span>Prüfen Sie das Lastenheft und hinterlassen Sie Kommentare</span>
+                        </li>
+                        <li className="flex items-start gap-2">
+                            <span className="font-bold">2.</span>
+                            <span>Wenn alles passt, klicken Sie auf "Freigeben"</span>
+                        </li>
+                        <li className="flex items-start gap-2">
+                            <span className="font-bold">3.</span>
+                            <span>Innerhalb von 24h erhalten Sie einen visuellen Entwurf</span>
+                        </li>
+                        <li className="flex items-start gap-2">
+                            <span className="font-bold">4.</span>
+                            <span>Wir besprechen den Entwurf per Video-Call</span>
+                        </li>
+                    </ul>
+                </section>
+            </main>
+        </div>
+    );
+};
+
+export default LastenheftView;
