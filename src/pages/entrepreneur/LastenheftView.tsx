@@ -12,9 +12,12 @@ import {
     MessageSquare,
     Send,
     Download,
-    Loader2
+    Loader2,
+    Lock,
+    Eye
 } from 'lucide-react';
 import { loadLastenheft, addComment, updateLastenheft } from '../../lib/lastenheft';
+import { supabase } from '../../lib/supabase';
 
 interface Requirement {
     id: string;
@@ -42,6 +45,7 @@ interface LastenheftData {
     status: string;
     comments: Comment[];
     created_at: string;
+    entrepreneur_id?: string | null;
 }
 
 const LastenheftView = () => {
@@ -55,6 +59,15 @@ const LastenheftView = () => {
     const [isSendingComment, setIsSendingComment] = useState(false);
     const [isApproving, setIsApproving] = useState(false);
 
+    // Gate & Contact State
+    const [isGateOpen, setIsGateOpen] = useState(false);
+    const [contactName, setContactName] = useState('');
+    const [contactEmail, setContactEmail] = useState('');
+    const [isSubmittingContact, setIsSubmittingContact] = useState(false);
+
+    // Offer Modal State
+    const [showOfferModal, setShowOfferModal] = useState(false);
+
     useEffect(() => {
         const fetchLastenheft = async () => {
             if (!id) {
@@ -67,6 +80,11 @@ const LastenheftView = () => {
                 const data = await loadLastenheft(id);
                 if (data) {
                     setLastenheft(data as LastenheftData);
+
+                    // Check if gate should be open (if entrepreneur_id is set)
+                    if (data.entrepreneur_id) {
+                        setIsGateOpen(true);
+                    }
                 } else {
                     setError('Lastenheft nicht gefunden');
                 }
@@ -79,6 +97,41 @@ const LastenheftView = () => {
 
         fetchLastenheft();
     }, [id]);
+
+    const handleContactSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!id || !contactName.trim() || !contactEmail.trim()) return;
+
+        setIsSubmittingContact(true);
+        try {
+            // 1. Create Entrepreneur Record
+            const { data: entrepreneur, error: entError } = await supabase
+                .from('entrepreneurs')
+                .insert({
+                    name: contactName,
+                    email: contactEmail,
+                })
+                .select()
+                .single();
+
+            if (entError) throw entError;
+
+            // 2. Link to Specification
+            const { error: specError } = await supabase
+                .from('specifications')
+                .update({ entrepreneur_id: entrepreneur.id })
+                .eq('id', id);
+
+            if (specError) throw specError;
+
+            setIsGateOpen(true);
+        } catch (err) {
+            console.error('Contact submit error:', err);
+            alert('Fehler beim Speichern der Kontaktdaten. Bitte versuchen Sie es erneut.');
+        } finally {
+            setIsSubmittingContact(false);
+        }
+    };
 
     const handleAddComment = async () => {
         if (!id || !newComment.trim()) return;
@@ -107,6 +160,10 @@ const LastenheftView = () => {
         } finally {
             setIsApproving(false);
         }
+    };
+
+    const handleOrderDraft = () => {
+        setShowOfferModal(true);
     };
 
     const getPriorityColor = (priority: string) => {
@@ -171,8 +228,65 @@ const LastenheftView = () => {
         );
     }
 
+    // CONTACT GATE
+    if (!isGateOpen) {
+        return (
+            <div className="min-h-screen bg-gradient-to-b from-amber-50 to-white flex flex-col items-center justify-center p-4">
+                <div className="max-w-md w-full bg-white rounded-2xl shadow-xl border border-amber-100 p-8 text-center">
+                    <div className="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                        <Lock className="w-8 h-8 text-amber-600" />
+                    </div>
+                    <h1 className="text-3xl font-bold text-gray-900 mb-2">Lastenheft freischalten</h1>
+                    <p className="text-gray-600 mb-8">
+                        Ihr Lastenheft wurde erfolgreich generiert! Bitte geben Sie Ihre Kontaktdaten ein, um es anzusehen und zu bearbeiten.
+                    </p>
+
+                    <form onSubmit={handleContactSubmit} className="space-y-4 text-left">
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
+                            <input
+                                type="text"
+                                required
+                                value={contactName}
+                                onChange={(e) => setContactName(e.target.value)}
+                                className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:border-amber-500 focus:ring-2 focus:ring-amber-200 outline-none"
+                                placeholder="Max Mustermann"
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">E-Mail Adresse</label>
+                            <input
+                                type="email"
+                                required
+                                value={contactEmail}
+                                onChange={(e) => setContactEmail(e.target.value)}
+                                className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:border-amber-500 focus:ring-2 focus:ring-amber-200 outline-none"
+                                placeholder="max@firma.de"
+                            />
+                        </div>
+                        <button
+                            type="submit"
+                            disabled={isSubmittingContact}
+                            className="w-full py-4 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-xl font-bold text-lg hover:from-amber-600 hover:to-orange-600 transition-all shadow-lg disabled:opacity-70 flex items-center justify-center gap-2"
+                        >
+                            {isSubmittingContact ? (
+                                <Loader2 className="w-5 h-5 animate-spin" />
+                            ) : (
+                                <Eye className="w-5 h-5" />
+                            )}
+                            Jetzt ansehen
+                        </button>
+                    </form>
+                    <p className="text-xs text-center text-gray-400 mt-4">
+                        Ihre Daten werden sicher gespeichert und nur für die Kommunikation zu diesem Projekt verwendet.
+                    </p>
+                </div>
+            </div>
+        );
+    }
+
     return (
-        <div className="min-h-screen bg-gradient-to-b from-amber-50 to-white">
+        <div className="min-h-screen bg-gradient-to-b from-amber-50 to-white relative">
             {/* Header */}
             <header className="bg-white border-b border-amber-100 px-6 py-4 sticky top-0 z-10 shadow-sm">
                 <div className="max-w-4xl mx-auto flex items-center justify-between">
@@ -236,6 +350,29 @@ const LastenheftView = () => {
                             <span className="text-sm">Ziel</span>
                         </div>
                         <p className="font-semibold text-gray-900 truncate">{lastenheft.desired_outcome || 'Nicht angegeben'}</p>
+                    </div>
+                </section>
+
+                {/* DESIGN DRAFT OFFER - PROMINENT */}
+                <section className="bg-gradient-to-r from-slate-900 to-slate-800 rounded-2xl shadow-xl overflow-hidden mb-8 border border-slate-700">
+                    <div className="p-8 flex flex-col md:flex-row items-center justify-between gap-6">
+                        <div className="text-left">
+                            <h3 className="text-2xl font-bold text-white mb-2">Visueller Entwurf gefällig?</h3>
+                            <p className="text-slate-300 max-w-lg">
+                                Wir erstellen Ihnen einen professionellen Design-Entwurf (Mockup) Ihrer App in nur 24 Stunden.
+                                Sehen Sie genau, wie die Lösung aussehen wird.
+                            </p>
+                        </div>
+                        <div className="flex flex-col items-center">
+                            <span className="text-3xl font-bold text-amber-400 mb-2">19,50 €</span>
+                            <button
+                                onClick={handleOrderDraft}
+                                className="px-8 py-3 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-full font-bold hover:from-amber-600 hover:to-orange-600 transition-all shadow-lg hover:shadow-amber-500/25 transform hover:-translate-y-1 whitespace-nowrap"
+                            >
+                                Jetzt Entwurf anfordern
+                            </button>
+                            <span className="text-xs text-slate-500 mt-2">Innerhalb von 24h • Zahlung auf Rechnung</span>
+                        </div>
                     </div>
                 </section>
 
@@ -356,30 +493,34 @@ const LastenheftView = () => {
                         Als PDF herunterladen
                     </button>
                 </section>
-
-                {/* Info-Box */}
-                <section className="mt-8 p-6 bg-amber-50 border border-amber-200 rounded-2xl">
-                    <h4 className="font-bold text-amber-800 mb-2">So geht's weiter</h4>
-                    <ul className="text-amber-700 space-y-2">
-                        <li className="flex items-start gap-2">
-                            <span className="font-bold">1.</span>
-                            <span>Prüfen Sie das Lastenheft und hinterlassen Sie Kommentare</span>
-                        </li>
-                        <li className="flex items-start gap-2">
-                            <span className="font-bold">2.</span>
-                            <span>Wenn alles passt, klicken Sie auf "Freigeben"</span>
-                        </li>
-                        <li className="flex items-start gap-2">
-                            <span className="font-bold">3.</span>
-                            <span>Innerhalb von 24h erhalten Sie einen visuellen Entwurf</span>
-                        </li>
-                        <li className="flex items-start gap-2">
-                            <span className="font-bold">4.</span>
-                            <span>Wir besprechen den Entwurf per Video-Call</span>
-                        </li>
-                    </ul>
-                </section>
             </main>
+
+            {/* OFFER INFO MODAL */}
+            {showOfferModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+                    <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-8 text-center">
+                        <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                            <CheckCircle className="w-8 h-8 text-green-600" />
+                        </div>
+                        <h3 className="text-2xl font-bold text-gray-900 mb-4">Anfrage erfolgreich!</h3>
+                        <p className="text-gray-600 mb-6">
+                            Wir erstellen Ihren individuellen Design-Entwurf. Sie erhalten diesen <strong>innerhalb von 24 Stunden per E-Mail</strong> an <em>{contactEmail}</em>.
+                        </p>
+                        <div className="bg-blue-50 border border-blue-100 p-4 rounded-xl mb-8 text-left">
+                            <p className="text-sm text-blue-800 mb-2"><strong>ℹ️ Bezahlung:</strong></p>
+                            <p className="text-sm text-blue-700">
+                                Sie erhalten die Rechnung über 19,50 € erst zusammen mit dem fertigen Entwurf. Sie zahlen nur, wenn Sie den Entwurf erhalten haben.
+                            </p>
+                        </div>
+                        <button
+                            onClick={() => setShowOfferModal(false)}
+                            className="w-full py-3 bg-gray-900 text-white rounded-xl font-bold hover:bg-gray-800 transition-colors"
+                        >
+                            Verstanden
+                        </button>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
