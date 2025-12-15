@@ -141,22 +141,29 @@ export async function generateLastenheft(
  */
 export async function saveLastenheft(
     conversationId: string,
-    lastenheft: Lastenheft,
+    lastenheft: any,
     entrepreneurId?: string
 ): Promise<string | null> {
     try {
+        // Das neue Lastenheft-Format speichern
+        // Wir speichern die komplexen Felder als JSON-String in problem_summary
         const { data, error } = await supabase
             .from('specifications')
             .insert({
                 entrepreneur_id: entrepreneurId || null,
                 conversation_id: conversationId,
-                title: lastenheft.title,
-                problem_summary: lastenheft.problemSummary,
-                requirements: lastenheft.requirements,
-                industry: lastenheft.industry,
-                team_size: lastenheft.teamSize,
-                budget_range: lastenheft.budgetRange,
-                desired_outcome: lastenheft.desiredOutcome,
+                title: lastenheft.title || 'Neues Lastenheft',
+                problem_summary: lastenheft.zielsetzung || lastenheft.problemSummary || '',
+                requirements: lastenheft.workflow || lastenheft.requirements || [],
+                industry: lastenheft.industry || 'nicht angegeben',
+                team_size: lastenheft.teamSize || 'nicht angegeben',
+                budget_range: lastenheft.geschaetzteKosten || lastenheft.budgetRange || 'nicht angegeben',
+                desired_outcome: JSON.stringify({
+                    techStack: lastenheft.techStackVorschlag,
+                    datenFelder: lastenheft.datenFelder,
+                    definitionOfDone: lastenheft.definitionOfDone,
+                    aufwand: lastenheft.geschaetzterAufwand
+                }),
                 status: 'draft'
             })
             .select()
