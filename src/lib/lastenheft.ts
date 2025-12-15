@@ -29,40 +29,74 @@ export interface Requirement {
     priority: 'high' | 'medium' | 'low';
 }
 
-const EXTRACTION_PROMPT = `Du bist ein Experte für IT-Anforderungsanalyse. Analysiere das folgende Gespräch zwischen einem Unternehmer und dem Nova-Assistenten.
+const EXTRACTION_PROMPT = `Du bist ein erfahrener Tech-Consultant, der aus Kundengesprächen technische Lastenhefte für Entwickler erstellt.
 
-Extrahiere daraus ein strukturiertes Lastenheft im JSON-Format:
+Analysiere das folgende Gespräch zwischen einem Kleinunternehmer und "Nova". Erstelle daraus ein professionelles Lastenheft im JSON-Format.
+
+# LASTENHEFT-STRUKTUR (Das musst du erstellen):
 
 {
-    "title": "Kurzer, prägnanter Projekttitel",
-    "problemSummary": "Zusammenfassung des Hauptproblems in 2-3 Sätzen",
-    "requirements": [
+    "title": "Emoji + Kurzer Projektname (z.B. '🚀 Maler-Express Angebot')",
+    "status": "Ready for Dev",
+    "priority": "Hoch/Mittel/Niedrig",
+    
+    "zielsetzung": "Was will der Nutzer erreichen? Warum? Was ist das Hauptproblem? (2-3 Sätze)",
+    
+    "workflow": [
         {
-            "id": "REQ-001",
-            "category": "Kategorie (z.B. Terminbuchung, Rechnungen, Kommunikation)",
-            "description": "Konkrete Anforderung",
-            "priority": "high/medium/low"
+            "step": 1,
+            "phase": "Input",
+            "beschreibung": "Was macht der Nutzer am Anfang?",
+            "beispiel": "Beispiel-Input vom User"
+        },
+        {
+            "step": 2,
+            "phase": "Processing",
+            "beschreibung": "Was passiert im Hintergrund?"
+        },
+        {
+            "step": 3,
+            "phase": "Output",
+            "beschreibung": "Was bekommt der Nutzer als Ergebnis?"
         }
     ],
-    "industry": "Branche des Unternehmers",
-    "teamSize": "Teamgröße",
-    "budgetRange": "Genanntes Budget oder 'nicht angegeben'",
-    "desiredOutcome": "Was der Unternehmer erreichen will",
-    "estimatedHours": Geschätzte Entwicklungsstunden (Zahl),
-    "estimatedCost": "Geschätzte Kosten als Text z.B. '2.000 - 3.500€'"
+    
+    "datenFelder": [
+        {
+            "name": "Feldname",
+            "typ": "String/Int/Float/Date/Enum/File/Bool",
+            "beschreibung": "Wozu wird das gebraucht?"
+        }
+    ],
+    
+    "techStackVorschlag": {
+        "frontend": "z.B. WhatsApp, Web-App, Telegram",
+        "backend": "z.B. Python, n8n, Make.com, Zapier",
+        "datenbank": "z.B. Airtable, Google Sheets, Supabase",
+        "extras": "z.B. OpenAI API, PDF Generator"
+    },
+    
+    "definitionOfDone": [
+        "✅ Erste Akzeptanzbedingung",
+        "✅ Zweite Akzeptanzbedingung",
+        "✅ Dritte Akzeptanzbedingung"
+    ],
+    
+    "industry": "Branche des Kunden",
+    "teamSize": "Teamgröße (falls genannt)",
+    "geschaetzterAufwand": "z.B. 20-40 Stunden",
+    "geschaetzteKosten": "z.B. 1.600€ - 3.200€"
 }
 
-REGELN:
-1. Extrahiere NUR Informationen, die explizit im Gespräch genannt wurden
-2. Wenn etwas nicht erwähnt wurde, schreibe "nicht angegeben"
-3. Übersetze Alltagsprobleme in IT-Anforderungen:
-   - "Termine vergessen" → "Automatische Terminbenachrichtigungen"
-   - "Kunden rufen an" → "Online-Buchungssystem"
-   - "Rechnungen dauern" → "Automatisierte Rechnungserstellung"
-4. Priorisiere nach Häufigkeit der Erwähnung und Dringlichkeit
-5. Schätze die Entwicklungszeit realistisch (Stundensatz 80€)
+# REGELN:
+1. **Denke wie ein Entwickler:** Was braucht ein Programmierer, um das zu bauen?
+2. **Konkrete Workflows:** Beschreibe den Ablauf Schritt für Schritt.
+3. **Datenfelder ableiten:** Welche Informationen müssen gespeichert werden?
+4. **Realistische Tech-Vorschläge:** Nutze No-Code/Low-Code wenn sinnvoll.
+5. **Klare Akzeptanzkriterien:** Wann ist das Projekt "fertig"?
+6. **Wenn Info fehlt:** Schreibe "nicht im Gespräch genannt".
 
-Antworte NUR mit dem JSON, keine Erklärungen.`;
+Antworte NUR mit dem JSON, keine Erklärungen drumherum.`;
 
 /**
  * Generiert ein Lastenheft aus einem Gesprächsverlauf
