@@ -1,43 +1,29 @@
-import { ArrowRight, Code, ShieldCheck, Zap, Quote } from 'lucide-react';
+import { ArrowRight, Code, ShieldCheck, Zap, Users, Building2, Briefcase, Home } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 const LandingPage = () => {
     const navigate = useNavigate();
 
-    const testimonials = [
-        {
-            name: "Thomas Müller",
-            role: "Bäckermeister",
-            image: "/images/baker.png",
-            quote: "Endlich jemand, der meine Sprache spricht. Ich wollte nur meine Bestellungen besser verwalten – Nova hat verstanden, was ich brauche."
-        },
-        {
-            name: "Sandra Weber",
-            role: "Friseurmeisterin",
-            image: "/images/hairdresser.png",
-            quote: "Ich hatte immer Angst vor IT-Projekten. Bei Nova fühlte ich mich verstanden, nicht überfordert."
-        },
-        {
-            name: "Klaus Hoffmann",
-            role: "Elektrikermeister",
-            image: "/images/craftsman.png",
-            quote: "Papierkram ist mein größter Feind. Nova hat mir gezeigt, dass es auch anders geht."
-        }
+    const targetGroups = [
+        { icon: Briefcase, label: "Selbstständige" },
+        { icon: Users, label: "Teamleiter" },
+        { icon: Building2, label: "Handwerksbetriebe" },
+        { icon: Home, label: "Vermieter" }
     ];
 
     return (
-        <div className="min-h-screen bg-gradient-to-b from-amber-50 via-white to-white">
+        <div className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900">
             {/* Navigation */}
-            <nav className="fixed w-full bg-white/80 backdrop-blur-md z-50 border-b border-amber-100">
+            <nav className="fixed w-full bg-slate-900/80 backdrop-blur-md z-50 border-b border-slate-700">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="flex justify-between items-center h-16">
-                        <div className="bg-gradient-to-r from-amber-600 to-orange-500 bg-clip-text text-transparent font-bold text-2xl tracking-tight">
+                        <div className="bg-gradient-to-r from-amber-400 to-orange-400 bg-clip-text text-transparent font-bold text-2xl tracking-tight">
                             NOVA
                         </div>
                         <div className="hidden md:flex items-center space-x-8">
                             <button
                                 onClick={() => navigate('/developer')}
-                                className="text-gray-500 hover:text-gray-900 transition-colors font-medium"
+                                className="text-slate-400 hover:text-white transition-colors font-medium"
                             >
                                 Für Developer
                             </button>
@@ -52,144 +38,123 @@ const LandingPage = () => {
                 </div>
             </nav>
 
-            {/* Hero Section with Images */}
-            <div className="relative pt-24 pb-16 lg:pt-32 lg:pb-24">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <div className="grid lg:grid-cols-2 gap-12 items-center">
-                        {/* Left: Text Content */}
-                        <div className="text-left">
-                            <div className="inline-block px-4 py-2 bg-amber-100 text-amber-800 rounded-full text-sm font-medium mb-6">
-                                Für Kleinunternehmer wie Sie
+            {/* Hero Section - Clean, No Images */}
+            <div className="relative pt-32 pb-20 lg:pt-40 lg:pb-32">
+                <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+                    {/* Target Groups Pills */}
+                    <div className="flex flex-wrap justify-center gap-3 mb-8">
+                        {targetGroups.map((group, idx) => (
+                            <div key={idx} className="flex items-center gap-2 px-4 py-2 bg-slate-800 text-slate-300 rounded-full text-sm border border-slate-700">
+                                <group.icon className="w-4 h-4 text-amber-400" />
+                                {group.label}
                             </div>
-                            <h1 className="text-4xl md:text-6xl font-extrabold tracking-tight text-gray-900 mb-6 leading-tight">
-                                Keine Zeit für IT? <br />
-                                <span className="bg-gradient-to-r from-amber-600 to-orange-500 bg-clip-text text-transparent">Wir übersetzen.</span>
-                            </h1>
-                            <p className="text-xl text-gray-600 mb-8 leading-relaxed">
-                                Sie konzentrieren sich auf Ihr Handwerk. Wir verstehen Ihre Herausforderungen und finden die passende IT-Lösung – ohne Fachchinesisch, ohne Stress.
-                            </p>
-                            <div className="flex flex-col sm:flex-row gap-4">
-                                <button
-                                    onClick={() => navigate('/entrepreneur')}
-                                    className="group flex items-center justify-center gap-3 bg-gradient-to-r from-amber-500 to-orange-500 text-white px-8 py-4 rounded-full text-lg font-semibold hover:from-amber-600 hover:to-orange-600 transition-all shadow-xl hover:shadow-2xl hover:-translate-y-1"
-                                >
-                                    Jetzt Problem schildern
-                                    <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-                                </button>
-                            </div>
-                            <p className="mt-4 text-sm text-gray-500">✓ Kostenlos ✓ Unverbindlich ✓ In 5 Minuten</p>
-                        </div>
-
-                        {/* Right: Image Grid */}
-                        <div className="relative">
-                            <div className="grid grid-cols-2 gap-4">
-                                <div className="space-y-4">
-                                    <div className="rounded-2xl overflow-hidden shadow-xl transform hover:scale-105 transition-transform duration-300">
-                                        <img
-                                            src="/images/baker.png"
-                                            alt="Bäcker bei der Arbeit"
-                                            className="w-full h-48 object-cover"
-                                        />
-                                    </div>
-                                    <div className="rounded-2xl overflow-hidden shadow-xl transform hover:scale-105 transition-transform duration-300">
-                                        <img
-                                            src="/images/craftsman.png"
-                                            alt="Handwerker mit Papierkram"
-                                            className="w-full h-64 object-cover"
-                                        />
-                                    </div>
-                                </div>
-                                <div className="pt-8">
-                                    <div className="rounded-2xl overflow-hidden shadow-xl transform hover:scale-105 transition-transform duration-300">
-                                        <img
-                                            src="/images/hairdresser.png"
-                                            alt="Friseurin im Salon"
-                                            className="w-full h-80 object-cover"
-                                        />
-                                    </div>
-                                </div>
-                            </div>
-                            {/* Decorative Elements */}
-                            <div className="absolute -top-4 -right-4 w-24 h-24 bg-amber-200 rounded-full opacity-50 blur-2xl"></div>
-                            <div className="absolute -bottom-4 -left-4 w-32 h-32 bg-orange-200 rounded-full opacity-50 blur-2xl"></div>
-                        </div>
+                        ))}
                     </div>
+
+                    <h1 className="text-4xl md:text-6xl lg:text-7xl font-extrabold tracking-tight text-white mb-6 leading-tight">
+                        IT-Probleme?<br />
+                        <span className="bg-gradient-to-r from-amber-400 to-orange-400 bg-clip-text text-transparent">
+                            Wir übersetzen.
+                        </span>
+                    </h1>
+
+                    <p className="text-xl md:text-2xl text-slate-400 mb-10 max-w-3xl mx-auto leading-relaxed">
+                        Egal ob Selbstständige, Teamleiter, Handwerker oder Vermieter –
+                        schildern Sie Ihr Problem in <span className="text-white font-medium">Ihren Worten</span>.
+                        Wir finden die passende IT-Lösung.
+                    </p>
+
+                    <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                        <button
+                            onClick={() => navigate('/entrepreneur')}
+                            className="group flex items-center justify-center gap-3 bg-gradient-to-r from-amber-500 to-orange-500 text-white px-10 py-5 rounded-full text-xl font-semibold hover:from-amber-600 hover:to-orange-600 transition-all shadow-2xl hover:shadow-amber-500/25 hover:-translate-y-1"
+                        >
+                            Jetzt Problem schildern
+                            <ArrowRight className="w-6 h-6 group-hover:translate-x-1 transition-transform" />
+                        </button>
+                    </div>
+
+                    <p className="mt-6 text-sm text-slate-500">
+                        ✓ Kostenlos ✓ Unverbindlich ✓ In 5 Minuten
+                    </p>
                 </div>
+
+                {/* Abstract Decorative Elements */}
+                <div className="absolute top-20 left-10 w-72 h-72 bg-amber-500/10 rounded-full blur-3xl"></div>
+                <div className="absolute bottom-20 right-10 w-96 h-96 bg-orange-500/10 rounded-full blur-3xl"></div>
             </div>
 
-            {/* Trust Bar */}
-            <div className="py-8 bg-white border-y border-gray-100">
+            {/* Who is Nova for? */}
+            <div className="py-20 bg-slate-800/50">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <p className="text-center text-gray-500 text-sm font-medium">
-                        Vertraut von <span className="text-gray-900 font-bold">Bäckereien</span>, <span className="text-gray-900 font-bold">Friseursalons</span>, <span className="text-gray-900 font-bold">Handwerksbetrieben</span> und vielen mehr
-                    </p>
+                    <div className="text-center mb-12">
+                        <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">Für wen ist Nova?</h2>
+                        <p className="text-xl text-slate-400 max-w-2xl mx-auto">
+                            Für alle, die keine Zeit für IT haben – aber trotzdem smarte Lösungen brauchen.
+                        </p>
+                    </div>
+                    <div className="grid md:grid-cols-4 gap-6">
+                        <div className="bg-slate-800 p-6 rounded-2xl border border-slate-700 hover:border-amber-500/50 transition-colors">
+                            <Briefcase className="w-10 h-10 text-amber-400 mb-4" />
+                            <h3 className="text-lg font-bold text-white mb-2">Selbstständige</h3>
+                            <p className="text-slate-400 text-sm">Rechnungen, Termine, Kundendaten – alles im Griff.</p>
+                        </div>
+                        <div className="bg-slate-800 p-6 rounded-2xl border border-slate-700 hover:border-amber-500/50 transition-colors">
+                            <Users className="w-10 h-10 text-amber-400 mb-4" />
+                            <h3 className="text-lg font-bold text-white mb-2">Teamleiter</h3>
+                            <p className="text-slate-400 text-sm">Projektübersicht, Kommunikation, Zeiterfassung.</p>
+                        </div>
+                        <div className="bg-slate-800 p-6 rounded-2xl border border-slate-700 hover:border-amber-500/50 transition-colors">
+                            <Building2 className="w-10 h-10 text-amber-400 mb-4" />
+                            <h3 className="text-lg font-bold text-white mb-2">Handwerksbetriebe</h3>
+                            <p className="text-slate-400 text-sm">Auftragsmanagement, Angebote, Materialplanung.</p>
+                        </div>
+                        <div className="bg-slate-800 p-6 rounded-2xl border border-slate-700 hover:border-amber-500/50 transition-colors">
+                            <Home className="w-10 h-10 text-amber-400 mb-4" />
+                            <h3 className="text-lg font-bold text-white mb-2">Vermieter</h3>
+                            <p className="text-slate-400 text-sm">Mieterverwaltung, Nebenkostenabrechnung, Reparaturen.</p>
+                        </div>
+                    </div>
                 </div>
             </div>
 
             {/* Features Grid */}
-            <div className="py-24 bg-white">
+            <div className="py-24 bg-slate-900">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="text-center mb-16">
-                        <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">So einfach funktioniert's</h2>
-                        <p className="text-xl text-gray-600 max-w-2xl mx-auto">Kein Technik-Studium nötig. Erzählen Sie uns einfach, was Sie stört.</p>
+                        <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">So einfach funktioniert's</h2>
+                        <p className="text-xl text-slate-400 max-w-2xl mx-auto">
+                            Kein Technik-Studium nötig. Erzählen Sie uns einfach, was Sie stört.
+                        </p>
                     </div>
                     <div className="grid md:grid-cols-3 gap-8">
-                        <div className="bg-gradient-to-br from-amber-50 to-orange-50 p-8 rounded-3xl border border-amber-100 hover:shadow-xl transition-all duration-300 hover:-translate-y-2">
+                        <div className="bg-gradient-to-br from-slate-800 to-slate-800/50 p-8 rounded-3xl border border-slate-700 hover:border-amber-500/30 transition-all duration-300 hover:-translate-y-2">
                             <div className="w-14 h-14 bg-gradient-to-br from-amber-400 to-orange-400 rounded-2xl flex items-center justify-center mb-6 shadow-lg">
                                 <Zap className="w-7 h-7 text-white" />
                             </div>
-                            <h3 className="text-xl font-bold text-gray-900 mb-3">1. Problem schildern</h3>
-                            <p className="text-gray-600">
+                            <h3 className="text-xl font-bold text-white mb-3">1. Problem schildern</h3>
+                            <p className="text-slate-400">
                                 Erzählen Sie in Ihren Worten, was Sie im Alltag stört. Keine Fachbegriffe nötig.
                             </p>
                         </div>
-                        <div className="bg-gradient-to-br from-amber-50 to-orange-50 p-8 rounded-3xl border border-amber-100 hover:shadow-xl transition-all duration-300 hover:-translate-y-2">
+                        <div className="bg-gradient-to-br from-slate-800 to-slate-800/50 p-8 rounded-3xl border border-slate-700 hover:border-amber-500/30 transition-all duration-300 hover:-translate-y-2">
                             <div className="w-14 h-14 bg-gradient-to-br from-amber-400 to-orange-400 rounded-2xl flex items-center justify-center mb-6 shadow-lg">
                                 <ShieldCheck className="w-7 h-7 text-white" />
                             </div>
-                            <h3 className="text-xl font-bold text-gray-900 mb-3">2. Lösung verstehen</h3>
-                            <p className="text-gray-600">
+                            <h3 className="text-xl font-bold text-white mb-3">2. Lösung verstehen</h3>
+                            <p className="text-slate-400">
                                 Wir übersetzen Ihr Problem in einen klaren Plan – mit echten Kosten, ohne Überraschungen.
                             </p>
                         </div>
-                        <div className="bg-gradient-to-br from-amber-50 to-orange-50 p-8 rounded-3xl border border-amber-100 hover:shadow-xl transition-all duration-300 hover:-translate-y-2">
+                        <div className="bg-gradient-to-br from-slate-800 to-slate-800/50 p-8 rounded-3xl border border-slate-700 hover:border-amber-500/30 transition-all duration-300 hover:-translate-y-2">
                             <div className="w-14 h-14 bg-gradient-to-br from-amber-400 to-orange-400 rounded-2xl flex items-center justify-center mb-6 shadow-lg">
                                 <Code className="w-7 h-7 text-white" />
                             </div>
-                            <h3 className="text-xl font-bold text-gray-900 mb-3">3. Entwickler finden</h3>
-                            <p className="text-gray-600">
+                            <h3 className="text-xl font-bold text-white mb-3">3. Entwickler finden</h3>
+                            <p className="text-slate-400">
                                 Qualifizierte Entwickler sehen Ihr Projekt und bewerben sich – Sie wählen aus.
                             </p>
                         </div>
-                    </div>
-                </div>
-            </div>
-
-            {/* Testimonials Section */}
-            <div className="py-24 bg-gradient-to-b from-white to-amber-50">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <div className="text-center mb-16">
-                        <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">Das sagen unsere Kunden</h2>
-                        <p className="text-xl text-gray-600">Echte Unternehmer, echte Geschichten</p>
-                    </div>
-                    <div className="grid md:grid-cols-3 gap-8">
-                        {testimonials.map((testimonial, idx) => (
-                            <div key={idx} className="bg-white p-8 rounded-3xl shadow-lg hover:shadow-xl transition-all duration-300 border border-gray-100">
-                                <Quote className="w-10 h-10 text-amber-300 mb-4" />
-                                <p className="text-gray-700 mb-6 italic leading-relaxed">"{testimonial.quote}"</p>
-                                <div className="flex items-center gap-4">
-                                    <img
-                                        src={testimonial.image}
-                                        alt={testimonial.name}
-                                        className="w-14 h-14 rounded-full object-cover border-2 border-amber-200"
-                                    />
-                                    <div>
-                                        <p className="font-bold text-gray-900">{testimonial.name}</p>
-                                        <p className="text-sm text-amber-600">{testimonial.role}</p>
-                                    </div>
-                                </div>
-                            </div>
-                        ))}
                     </div>
                 </div>
             </div>
@@ -214,12 +179,12 @@ const LandingPage = () => {
             </div>
 
             {/* Footer */}
-            <footer className="bg-gray-900 py-12">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex justify-between items-center text-gray-400 text-sm">
+            <footer className="bg-slate-900 py-12 border-t border-slate-800">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex justify-between items-center text-slate-500 text-sm">
                     <p>© 2024 Nova Platform. Alle Rechte vorbehalten.</p>
                     <button
                         onClick={() => navigate('/admin')}
-                        className="hover:text-gray-200 transition-colors"
+                        className="hover:text-slate-300 transition-colors"
                     >
                         🔒
                     </button>
