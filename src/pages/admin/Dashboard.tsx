@@ -1,15 +1,12 @@
 import { useState, useEffect } from 'react';
 import {
     ArrowLeft,
-    Users,
     FileText,
     MessageSquare,
-    Euro,
     RefreshCw,
     ExternalLink,
     Clock,
-    CheckCircle,
-    AlertCircle
+    CheckCircle
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
@@ -181,8 +178,8 @@ const Dashboard = () => {
                         <button
                             onClick={() => setActiveTab('conversations')}
                             className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors ${activeTab === 'conversations'
-                                    ? 'bg-amber-500 text-white'
-                                    : 'text-gray-400 hover:text-white hover:bg-gray-800'
+                                ? 'bg-amber-500 text-white'
+                                : 'text-gray-400 hover:text-white hover:bg-gray-800'
                                 }`}
                         >
                             <MessageSquare className="w-5 h-5" />
@@ -196,8 +193,8 @@ const Dashboard = () => {
                         <button
                             onClick={() => setActiveTab('specifications')}
                             className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors ${activeTab === 'specifications'
-                                    ? 'bg-amber-500 text-white'
-                                    : 'text-gray-400 hover:text-white hover:bg-gray-800'
+                                ? 'bg-amber-500 text-white'
+                                : 'text-gray-400 hover:text-white hover:bg-gray-800'
                                 }`}
                         >
                             <FileText className="w-5 h-5" />

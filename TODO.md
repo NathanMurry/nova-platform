@@ -1,52 +1,64 @@
 # NOVA - TODO Liste
 
-## 🔜 Nächste Schritte (Priorität: Hoch)
+## 🔜 Nächste Schritte
 
-### 1. Lastenheft-Generierung aus Gespräch
-- [ ] Aus Gesprächsverlauf automatisch Lastenheft erstellen
-- [ ] Lastenheft-Ansicht für Unternehmer bauen
-- [ ] Unternehmer kann Lastenheft anpassen/kommentieren
-- [ ] Lastenheft als PDF exportieren
+### 1. Vercel Deployment
+- [ ] GitHub Repository erstellen und pushen
+- [ ] Mit Vercel verbinden
+- [ ] Environment Variables in Vercel eintragen
+- [ ] Domain verbinden
 
-### 2. Admin-Dashboard (für dich)
-- [ ] Alle Gespräche im Überblick sehen
-- [ ] Lastenhefte verwalten
-- [ ] Entwürfe erstellen und hochladen
-- [ ] Aufträge & Provision tracken
+### 2. PDF Export für Lastenhefte
+- [ ] PDF-Generierung implementieren
+- [ ] Nova-Branding im PDF
+- [ ] Download-Button funktionsfähig machen
+
+### 3. E-Mail Benachrichtigungen
+- [ ] Bei neuen Gesprächen benachrichtigen
+- [ ] Bei Lastenheft-Freigabe benachrichtigen
+- [ ] Unternehmer informieren über Entwurf
 
 ---
 
 ## 📋 Später
 
-### 3. Unternehmer-Authentifizierung
+### 4. Unternehmer-Authentifizierung
 - [ ] Login/Registrierung für Unternehmer
 - [ ] Gespräche an Unternehmer-Account binden
 - [ ] E-Mail-Verifizierung
 
-### 4. Entwürfe & Aufträge
+### 5. Entwürfe & Aufträge
 - [ ] Entwurf hochladen (Bilder, PDFs)
 - [ ] Video-Call Termine planen (Calendly Integration?)
 - [ ] Programmierer-Vermittlung
 - [ ] Provision berechnen (10%)
 
-### 5. Git & Deployment
-- [ ] Git Repository einrichten
-- [ ] Auf Vercel deployen
-- [ ] Domain verbinden
+### 6. Programmierer-Portal
+- [ ] Programmierer-Registrierung
+- [ ] Projekte ansehen und bewerben
+- [ ] Kommunikation mit Unternehmern
 
 ---
 
 ## ✅ Erledigt
 
 - [x] Supabase eingerichtet und konfiguriert
-- [x] Datenbank-Tabellen erstellt (entrepreneurs, conversations, specifications, drafts, orders)
+- [x] Datenbank-Tabellen erstellt
 - [x] ChatBot mit Supabase verbunden
 - [x] Gespräche werden automatisch gespeichert
 - [x] Speicher-Anzeige im ChatBot-Header
-- [x] Communication Guide v2.0 erstellt (psychologisch optimiert)
-- [x] Gemini AI Integration (Modell: gemini-2.0-flash-exp)
+- [x] Communication Guide v2.0 erstellt
+- [x] Gemini AI Integration (gemini-2.0-flash-exp)
 - [x] System-Prompt für Gesprächsführung
+- [x] **Lastenheft-Generierung aus Gespräch**
+- [x] **Lastenheft-Ansicht für Unternehmer**
+- [x] **Kommentar-Funktion für Lastenhefte**
+- [x] **Freigabe-Button für Lastenhefte**
+- [x] **Admin-Dashboard mit echten Daten**
+- [x] **Gespräche-Übersicht im Dashboard**
+- [x] **Lastenhefte-Übersicht im Dashboard**
+- [x] **Git Repository initialisiert**
 
 ---
 
-*Letzte Aktualisierung: 2024-12-14 17:53*
+*Letzte Aktualisierung: 2024-12-14 18:10*

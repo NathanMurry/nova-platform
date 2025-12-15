@@ -52,7 +52,7 @@ export interface Database {
             conversations: {
                 Row: {
                     id: string;
-                    entrepreneur_id: string;
+                    entrepreneur_id: string | null;
                     messages: ConversationMessage[];
                     status: 'active' | 'completed' | 'abandoned';
                     created_at: string;
@@ -60,7 +60,7 @@ export interface Database {
                 };
                 Insert: {
                     id?: string;
-                    entrepreneur_id: string;
+                    entrepreneur_id?: string | null;
                     messages?: ConversationMessage[];
                     status?: 'active' | 'completed' | 'abandoned';
                     created_at?: string;
@@ -77,33 +77,33 @@ export interface Database {
             specifications: {
                 Row: {
                     id: string;
-                    entrepreneur_id: string;
-                    conversation_id: string;
+                    entrepreneur_id: string | null;
+                    conversation_id: string | null;
                     title: string;
-                    problem_summary: string;
-                    requirements: Requirement[];
+                    problem_summary: string | null;
+                    requirements: Requirement[] | null;
                     industry: string | null;
                     team_size: string | null;
                     budget_range: string | null;
                     desired_outcome: string | null;
                     status: 'draft' | 'review' | 'approved' | 'in_progress' | 'completed';
-                    comments: Comment[];
+                    comments: Comment[] | null;
                     created_at: string;
-                    updated_at: string;
+                    updated_at: string | null;
                 };
                 Insert: {
                     id?: string;
-                    entrepreneur_id: string;
-                    conversation_id: string;
-                    title: string;
-                    problem_summary: string;
-                    requirements?: Requirement[];
+                    entrepreneur_id?: string | null;
+                    conversation_id?: string | null;
+                    title?: string;
+                    problem_summary?: string | null;
+                    requirements?: Requirement[] | null;
                     industry?: string | null;
                     team_size?: string | null;
                     budget_range?: string | null;
                     desired_outcome?: string | null;
                     status?: 'draft' | 'review' | 'approved' | 'in_progress' | 'completed';
-                    comments?: Comment[];
+                    comments?: Comment[] | null;
                     created_at?: string;
                     updated_at?: string;
                 };
