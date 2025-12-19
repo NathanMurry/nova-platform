@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { Send, ArrowLeft, Save, CheckCircle, Sparkles, FileText, Loader2 } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { sendMessage, getInitialMessage, resetChat } from '../../lib/gemini';
 import { generateLastenheft, saveLastenheft } from '../../lib/lastenheft';
@@ -13,6 +13,7 @@ interface Message {
 
 const ChatBot = () => {
     const navigate = useNavigate();
+    const location = useLocation();
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
     // Supabase State
@@ -33,12 +34,24 @@ const ChatBot = () => {
     // Initialisierung: Gemini Begrüßung holen
     useEffect(() => {
         const initChat = async () => {
+            // Check for passed initial message from landing page
+            const state = location.state as { initialMessage?: string } | null;
+
             setIsLoading(true);
             resetChat(); // Vorherige Gespräche zurücksetzen
 
             try {
                 const greeting = await getInitialMessage();
                 setMessages([{ type: 'bot', content: greeting }]);
+
+                // If we have an initial message, send it immediately after a short delay
+                if (state?.initialMessage) {
+                    setTimeout(() => {
+                        handleSend(state.initialMessage);
+                        // Clear state history
+                        window.history.replaceState({}, document.title);
+                    }, 500);
+                }
             } catch (err) {
                 setMessages([{
                     type: 'bot',
@@ -49,6 +62,7 @@ const ChatBot = () => {
             setIsLoading(false);
         };
 
+        // Only run once on mount
         initChat();
     }, []);
 
