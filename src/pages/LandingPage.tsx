@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ArrowRight, Code, ShieldCheck, Zap, Users, Building2, Briefcase, Home, Send, Sparkles } from 'lucide-react';
+import { ArrowRight, Zap, Users, Building2, Briefcase, Home, Sparkles } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 const LandingPage = () => {
