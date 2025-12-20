@@ -14,7 +14,8 @@ import {
     Download,
     Loader2,
     Lock,
-    Eye
+    Eye,
+    Zap
 } from 'lucide-react';
 import { loadLastenheft, addComment, updateLastenheft } from '../../lib/lastenheft';
 import { supabase } from '../../lib/supabase';
@@ -97,6 +98,18 @@ const LastenheftView = () => {
 
         fetchLastenheft();
     }, [id]);
+
+    // Parse desired_outcome
+    const parseDesiredOutcome = () => {
+        if (!lastenheft?.desired_outcome) return null;
+        try {
+            return JSON.parse(lastenheft.desired_outcome);
+        } catch (e) {
+            return null;
+        }
+    };
+
+    const outcome = parseDesiredOutcome();
 
     const handleContactSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -349,7 +362,9 @@ const LastenheftView = () => {
                             <Target className="w-4 h-4" />
                             <span className="text-sm">Ziel</span>
                         </div>
-                        <p className="font-semibold text-gray-900 truncate">{lastenheft.desired_outcome || 'Nicht angegeben'}</p>
+                        <p className="font-semibold text-gray-900 truncate">
+                            {outcome?.aufwand || 'System-Lösung'}
+                        </p>
                     </div>
                 </section>
 
@@ -375,6 +390,43 @@ const LastenheftView = () => {
                         </div>
                     </div>
                 </section>
+
+                {/* Tech Stack & Details */}
+                {outcome && (
+                    <section className="grid md:grid-cols-2 gap-6 mb-8">
+                        {/* Tech Stack */}
+                        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+                            <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+                                <Zap className="w-5 h-5 text-amber-500" />
+                                Technischer Ansatz
+                            </h3>
+                            <div className="space-y-4">
+                                {outcome.techStack && Object.entries(outcome.techStack).map(([key, value]) => (
+                                    <div key={key} className="flex justify-between items-center text-sm border-b border-gray-50 pb-2">
+                                        <span className="text-gray-500 capitalize">{key}</span>
+                                        <span className="font-medium text-gray-900">{value as string}</span>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Definition of Done */}
+                        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+                            <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+                                <CheckCircle className="w-5 h-5 text-green-500" />
+                                Akzeptanzkriterien
+                            </h3>
+                            <div className="space-y-2">
+                                {outcome.definitionOfDone && outcome.definitionOfDone.map((item: string, idx: number) => (
+                                    <div key={idx} className="flex items-start gap-2 text-sm text-gray-700">
+                                        <div className="mt-1 w-1.5 h-1.5 bg-green-500 rounded-full flex-shrink-0" />
+                                        {item}
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    </section>
+                )}
 
                 {/* Anforderungen */}
                 <section className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 mb-6">

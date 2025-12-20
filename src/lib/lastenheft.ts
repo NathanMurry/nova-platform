@@ -29,74 +29,66 @@ export interface Requirement {
     priority: 'high' | 'medium' | 'low';
 }
 
-const EXTRACTION_PROMPT = `Du bist ein erfahrener Tech-Consultant, der aus Kundengesprächen technische Lastenhefte für Entwickler erstellt.
+const EXTRACTION_PROMPT = `Du bist ein Senior IT-Architect und Business Analyst. Deine Aufgabe ist es, aus einem Nutzergespräch ein hochprofessionelles, detailliertes Lastenheft zu extrahieren.
 
-Analysiere das folgende Gespräch zwischen einem Kleinunternehmer und "Nova". Erstelle daraus ein professionelles Lastenheft im JSON-Format.
+# DEIN ANALYSE-FOKUS:
+1. **Das System verstehen:** Beschreibe nicht nur das Problem, sondern das fehlerhafte System dahinter.
+2. **Detailtiefe:** Sei extrem spezifisch. Wenn der Nutzer "Chaos" sagt, beschreibe genau, wo Informationen verloren gehen.
+3. **Technische Präzision:** Leite aus vagen Wünschen konkrete funktionale Anforderungen für Entwickler ab.
 
-# LASTENHEFT-STRUKTUR (Das musst du erstellen):
+# LASTENHEFT-STRUKTUR (JSON):
 
 {
-    "title": "Emoji + Kurzer Projektname (z.B. '🚀 Maler-Express Angebot')",
+    "title": "Emoji + Präziser Projektname",
     "status": "Ready for Dev",
     "priority": "Hoch/Mittel/Niedrig",
     
-    "zielsetzung": "Was will der Nutzer erreichen? Warum? Was ist das Hauptproblem? (2-3 Sätze)",
+    "zielsetzung": "Umfassende Analyse (min. 150 Wörter). Erkläre: 
+        1. IST-Zustand (Das Chaos-System), 
+        2. SOLL-Zustand (Die systematische Lösung), 
+        3. Business Impact (Warum ist das wichtig?).",
     
     "workflow": [
         {
-            "step": 1,
-            "phase": "Input",
-            "beschreibung": "Was macht der Nutzer am Anfang?",
-            "beispiel": "Beispiel-Input vom User"
-        },
-        {
-            "step": 2,
-            "phase": "Processing",
-            "beschreibung": "Was passiert im Hintergrund?"
-        },
-        {
-            "step": 3,
-            "phase": "Output",
-            "beschreibung": "Was bekommt der Nutzer als Ergebnis?"
+            "id": "WF-001",
+            "category": "Phase Name",
+            "description": "Detaillierte technische Beschreibung des Teilsystems.",
+            "priority": "high/medium/low"
         }
     ],
     
     "datenFelder": [
         {
             "name": "Feldname",
-            "typ": "String/Int/Float/Date/Enum/File/Bool",
-            "beschreibung": "Wozu wird das gebraucht?"
+            "typ": "String/Int/Bool/etc.",
+            "beschreibung": "Genaue Verwendung"
         }
     ],
     
     "techStackVorschlag": {
-        "frontend": "z.B. WhatsApp, Web-App, Telegram",
-        "backend": "z.B. Python, n8n, Make.com, Zapier",
-        "datenbank": "z.B. Airtable, Google Sheets, Supabase",
-        "extras": "z.B. OpenAI API, PDF Generator"
+        "frontend": "Konkrete Empfehlung",
+        "backend": "Konkrete Empfehlung",
+        "datenbank": "Konkrete Empfehlung",
+        "extras": "APIs, Tools etc."
     },
     
     "definitionOfDone": [
-        "✅ Erste Akzeptanzbedingung",
-        "✅ Zweite Akzeptanzbedingung",
-        "✅ Dritte Akzeptanzbedingung"
+        "✅ Konkretes Abnahmekriterium 1",
+        "✅ Konkretes Abnahmekriterium 2"
     ],
     
-    "industry": "Branche des Kunden",
-    "teamSize": "Teamgröße (falls genannt)",
-    "geschaetzterAufwand": "z.B. 20-40 Stunden",
-    "geschaetzteKosten": "z.B. 1.600€ - 3.200€"
+    "industry": "Genaue Branche",
+    "teamSize": "Anzahl Personen",
+    "geschaetzterAufwand": "Stundenbereich (z.B. 30-50h)",
+    "geschaetzteKosten": "Eurobereich (z.B. 2.400€ - 4.000€)"
 }
 
-# REGELN:
-1. **Denke wie ein Entwickler:** Was braucht ein Programmierer, um das zu bauen?
-2. **Konkrete Workflows:** Beschreibe den Ablauf Schritt für Schritt.
-3. **Datenfelder ableiten:** Welche Informationen müssen gespeichert werden?
-4. **Realistische Tech-Vorschläge:** Nutze No-Code/Low-Code wenn sinnvoll.
-5. **Klare Akzeptanzkriterien:** Wann ist das Projekt "fertig"?
-6. **Wenn Info fehlt:** Schreibe "nicht im Gespräch genannt".
+# STRIKTE REGELN:
+- **Keine Platzhalter:** Wenn eine Info fehlt, leite sie logisch aus dem Kontext hergeleitet ab ("Basierend auf der Beschreibung...") statt "nicht genannt" zu schreiben.
+- **Entwickler-Fokus:** Die Beschreibungen müssen so klar sein, dass man sie in Jira-Tickets umwandeln kann.
+- **Sprache:** Deutsch.
 
-Antworte NUR mit dem JSON, keine Erklärungen drumherum.`;
+Antworte NUR mit dem validen JSON.`;
 
 /**
  * Generiert ein Lastenheft aus einem Gesprächsverlauf
