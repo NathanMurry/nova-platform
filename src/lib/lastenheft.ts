@@ -77,14 +77,15 @@ const EXTRACTION_PROMPT = `Du bist ein Senior IT-Architect und Business Analyst.
         "✅ Konkretes Abnahmekriterium 2"
     ],
     
-    "industry": "Genaue Branche",
-    "teamSize": "Anzahl Personen",
+    "industry": "Genaue Branche (oder 'Nicht angegeben')",
+    "teamSize": "Anzahl Personen (oder 'Nicht angegeben')",
     "geschaetzterAufwand": "Stundenbereich (z.B. 30-50h)",
     "geschaetzteKosten": "Eurobereich (z.B. 2.400€ - 4.000€)"
 }
 
 # STRIKTE REGELN:
-- **Keine Platzhalter:** Wenn eine Info fehlt, leite sie logisch aus dem Kontext hergeleitet ab ("Basierend auf der Beschreibung...") statt "nicht genannt" zu schreiben.
+- **Fakten-Check:** Erfinde NIEMALS spezifische Zahlen (z.B. Mitarbeiterzahl, Budget), die nicht genannt wurden. Nutzung "Nicht angegeben" ist besser als eine Lüge.
+- **Logische Ableitung:** Bei fehlenden funktionalen Details darfst du logische Schlüsse ziehen (z.B. "Login benötigt" bei sensiblen Daten), aber kennzeichne dies.
 - **Entwickler-Fokus:** Die Beschreibungen müssen so klar sein, dass man sie in Jira-Tickets umwandeln kann.
 - **Sprache:** Deutsch.
 

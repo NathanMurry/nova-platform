@@ -5,6 +5,18 @@
 -- SQL Editor → New Query → Paste & Run
 -- =====================================================
 
+-- =====================================================
+-- ERWEITERUNGEN
+-- =====================================================
+-- Enable pgvector extension to work with embeddings
+CREATE EXTENSION IF NOT EXISTS vector;
+
+-- =====================================================
+-- SEQUENCES
+-- =====================================================
+-- Projekt-Nummern-Generator (z.B. für P-2025-0001)
+CREATE SEQUENCE IF NOT EXISTS project_number_seq START 1;
+
 -- 1. UNTERNEHMER (entrepreneurs)
 -- =====================================================
 CREATE TABLE IF NOT EXISTS entrepreneurs (
@@ -40,6 +52,7 @@ CREATE INDEX IF NOT EXISTS idx_conversations_entrepreneur ON conversations(entre
 -- =====================================================
 CREATE TABLE IF NOT EXISTS specifications (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    project_number TEXT UNIQUE, -- z.B. 'P-2025-0042'
     entrepreneur_id UUID REFERENCES entrepreneurs(id) ON DELETE CASCADE,
     conversation_id UUID REFERENCES conversations(id) ON DELETE SET NULL,
     title TEXT NOT NULL,
@@ -102,6 +115,35 @@ CREATE INDEX IF NOT EXISTS idx_orders_draft ON orders(draft_id);
 CREATE INDEX IF NOT EXISTS idx_orders_status ON orders(status);
 CREATE INDEX IF NOT EXISTS idx_orders_programmer ON orders(programmer_id);
 
+-- 6. WISSENSDATENBANK (knowledge_base)
+-- =====================================================
+CREATE TABLE IF NOT EXISTS knowledge_base (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    specification_id UUID REFERENCES specifications(id) ON DELETE CASCADE, -- Link zum Originalprojekt
+    project_number TEXT, -- Redundant aber praktisch für Suche (z.B. 'P-2025-0042')
+    
+    -- Content aus AI Studio JSON
+    problem_abstract TEXT NOT NULL,
+    solution_pattern TEXT NOT NULL,
+    industry_context TEXT,
+    functionality_profile TEXT[], -- Array von Strings
+    tech_stack JSONB, -- {frontend, backend, ...}
+    use_case_tags TEXT[], 
+    
+    -- Deployment Links
+    github_url TEXT,
+    deployment_url TEXT,
+    
+    -- AI Memory
+    embedding vector(768), -- Für Gemini Text Embedding (768 Dimensionen)
+    
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_knowledge_embedding ON knowledge_base USING ivfflat (embedding vector_cosine_ops)
+    WITH (lists = 100);
+
 -- =====================================================
 -- AUTOMATISCHE UPDATED_AT TRIGGER
 -- =====================================================
@@ -114,24 +156,52 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Trigger für alle Tabellen
+DROP TRIGGER IF EXISTS update_entrepreneurs_updated_at ON entrepreneurs;
 CREATE TRIGGER update_entrepreneurs_updated_at
     BEFORE UPDATE ON entrepreneurs
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_specifications_updated_at ON specifications;
 CREATE TRIGGER update_specifications_updated_at
     BEFORE UPDATE ON specifications
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_drafts_updated_at ON drafts;
 CREATE TRIGGER update_drafts_updated_at
     BEFORE UPDATE ON drafts
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_orders_updated_at ON orders;
 CREATE TRIGGER update_orders_updated_at
     BEFORE UPDATE ON orders
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_knowledge_base_updated_at ON knowledge_base;
+CREATE TRIGGER update_knowledge_base_updated_at
+    BEFORE UPDATE ON knowledge_base
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
 -- =====================================================
--- ROW LEVEL SECURITY (RLS) - Optional aber empfohlen
+-- AUTOMATISCHE PROJEKT-NUMMER
+-- =====================================================
+CREATE OR REPLACE FUNCTION set_project_number()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF NEW.project_number IS NULL THEN
+        -- Format: P-YYYY-XXXX (z.B. P-2025-0001)
+        NEW.project_number := 'P-' || to_char(NOW(), 'YYYY') || '-' || lpad(nextval('project_number_seq')::text, 4, '0');
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS set_project_number_trigger ON specifications;
+CREATE TRIGGER set_project_number_trigger
+    BEFORE INSERT ON specifications
+    FOR EACH ROW EXECUTE FUNCTION set_project_number();
+
+-- =====================================================
+-- ROW LEVEL SECURITY (RLS)
 -- =====================================================
 -- Aktiviere RLS für alle Tabellen
 ALTER TABLE entrepreneurs ENABLE ROW LEVEL SECURITY;
@@ -139,22 +209,28 @@ ALTER TABLE conversations ENABLE ROW LEVEL SECURITY;
 ALTER TABLE specifications ENABLE ROW LEVEL SECURITY;
 ALTER TABLE drafts ENABLE ROW LEVEL SECURITY;
 ALTER TABLE orders ENABLE ROW LEVEL SECURITY;
+ALTER TABLE knowledge_base ENABLE ROW LEVEL SECURITY;
 
 -- Einfache Policy: Angemeldete Benutzer können ihre eigenen Daten sehen
--- (Du kannst das später anpassen)
+-- Policies müssen ggf. gelöscht werden bevor sie neu erstellt werden können (Idempotenz)
+-- Hier vereinfacht, Supabase ignoriert meist existente Policies ohne Fehler oder man nutzt DROP POLICY IF EXISTS
+DROP POLICY IF EXISTS "Users can view own data" ON entrepreneurs;
 CREATE POLICY "Users can view own data" ON entrepreneurs
     FOR ALL USING (auth.uid()::text = id::text);
 
+DROP POLICY IF EXISTS "Users can view own conversations" ON conversations;
 CREATE POLICY "Users can view own conversations" ON conversations
     FOR ALL USING (entrepreneur_id IN (
         SELECT id FROM entrepreneurs WHERE auth.uid()::text = id::text
     ));
 
+DROP POLICY IF EXISTS "Users can view own specifications" ON specifications;
 CREATE POLICY "Users can view own specifications" ON specifications
     FOR ALL USING (entrepreneur_id IN (
         SELECT id FROM entrepreneurs WHERE auth.uid()::text = id::text
     ));
 
+DROP POLICY IF EXISTS "Users can view related drafts" ON drafts;
 CREATE POLICY "Users can view related drafts" ON drafts
     FOR ALL USING (specification_id IN (
         SELECT id FROM specifications WHERE entrepreneur_id IN (
@@ -162,6 +238,7 @@ CREATE POLICY "Users can view related drafts" ON drafts
         )
     ));
 
+DROP POLICY IF EXISTS "Users can view related orders" ON orders;
 CREATE POLICY "Users can view related orders" ON orders
     FOR ALL USING (draft_id IN (
         SELECT d.id FROM drafts d
@@ -170,21 +247,14 @@ CREATE POLICY "Users can view related orders" ON orders
             SELECT id FROM entrepreneurs WHERE auth.uid()::text = id::text
         )
     ));
+    
+DROP POLICY IF EXISTS "Admins can view all knowledge" ON knowledge_base;
+CREATE POLICY "Admins can view all knowledge" ON knowledge_base
+    FOR ALL USING (true);
 
 -- =====================================================
 -- STORAGE BUCKETS
 -- =====================================================
 -- Führe diese im Supabase Dashboard unter Storage aus:
--- 1. Erstelle Bucket "drafts" (public)
--- 2. Erstelle Bucket "documents" (private)
--- 
--- Oder via SQL:
 -- INSERT INTO storage.buckets (id, name, public) VALUES ('drafts', 'drafts', true);
 -- INSERT INTO storage.buckets (id, name, public) VALUES ('documents', 'documents', false);
-
--- =====================================================
--- BEISPIELDATEN (optional, zum Testen)
--- =====================================================
--- INSERT INTO entrepreneurs (email, name, company, industry, team_size) VALUES
--- ('max@baeckerei.de', 'Max Müller', 'Bäckerei Müller', 'Gastro', '2-5'),
--- ('lisa@handwerk.de', 'Lisa Schmidt', 'Schmidt Schreinerei', 'Handwerk', '6-15');

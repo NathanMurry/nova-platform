@@ -77,6 +77,7 @@ export interface Database {
             specifications: {
                 Row: {
                     id: string;
+                    project_number: string | null;
                     entrepreneur_id: string | null;
                     conversation_id: string | null;
                     title: string;
@@ -93,6 +94,7 @@ export interface Database {
                 };
                 Insert: {
                     id?: string;
+                    project_number?: string | null;
                     entrepreneur_id?: string | null;
                     conversation_id?: string | null;
                     title?: string;
@@ -108,6 +110,7 @@ export interface Database {
                     updated_at?: string;
                 };
                 Update: {
+                    project_number?: string | null;
                     title?: string;
                     problem_summary?: string;
                     requirements?: Requirement[];
@@ -209,6 +212,56 @@ export interface Database {
                     updated_at?: string;
                 };
             };
+
+            // === WISSENSDATENBANK ===
+            knowledge_base: {
+                Row: {
+                    id: string;
+                    specification_id: string | null;
+                    project_number: string | null;
+                    problem_abstract: string;
+                    solution_pattern: string;
+                    industry_context: string | null;
+                    functionality_profile: string[] | null;
+                    tech_stack: Json | null;
+                    use_case_tags: string[] | null;
+                    github_url: string | null;
+                    deployment_url: string | null;
+                    embedding: string | null;
+                    created_at: string;
+                    updated_at: string;
+                };
+                Insert: {
+                    id?: string;
+                    specification_id?: string | null;
+                    project_number?: string | null;
+                    problem_abstract: string;
+                    solution_pattern: string;
+                    industry_context?: string | null;
+                    functionality_profile?: string[] | null;
+                    tech_stack?: Json | null;
+                    use_case_tags?: string[] | null;
+                    github_url?: string | null;
+                    deployment_url?: string | null;
+                    embedding?: string | null;
+                    created_at?: string;
+                    updated_at?: string;
+                };
+                Update: {
+                    specification_id?: string | null;
+                    project_number?: string | null;
+                    problem_abstract?: string;
+                    solution_pattern?: string;
+                    industry_context?: string | null;
+                    functionality_profile?: string[] | null;
+                    tech_stack?: Json | null;
+                    use_case_tags?: string[] | null;
+                    github_url?: string | null;
+                    deployment_url?: string | null;
+                    embedding?: string | null;
+                    updated_at?: string;
+                };
+            };
         };
     };
 }
@@ -242,3 +295,4 @@ export type Conversation = Database['public']['Tables']['conversations']['Row'];
 export type Specification = Database['public']['Tables']['specifications']['Row'];
 export type Draft = Database['public']['Tables']['drafts']['Row'];
 export type Order = Database['public']['Tables']['orders']['Row'];
+export type KnowledgeEntry = Database['public']['Tables']['knowledge_base']['Row'];
