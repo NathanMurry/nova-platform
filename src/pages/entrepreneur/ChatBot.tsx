@@ -153,7 +153,15 @@ const ChatBot = () => {
 
         try {
             // Gemini Antwort holen
-            const response = await sendMessage(messageToSend);
+            let response = await sendMessage(messageToSend);
+
+            // Check if analysis is complete (trigger for spec button)
+            if (response.includes('[ANALYSIS_COMPLETE]')) {
+                setShowLastenheftButton(true);
+                // Clean the tag from the UI response
+                response = response.replace('[ANALYSIS_COMPLETE]', '').trim();
+            }
+
             setMessages(prev => [...prev, { type: 'bot', content: response }]);
         } catch (err) {
             setMessages(prev => [...prev, {
@@ -212,12 +220,7 @@ const ChatBot = () => {
         }
     };
 
-    // Zeige Lastenheft-Button nach genug Nachrichten
-    useEffect(() => {
-        if (messages.length >= 10) {
-            setShowLastenheftButton(true);
-        }
-    }, [messages]);
+    // Button-Logic wird nun direkt in handleSend gesteuert (Signal-basiert)
 
     // Quick Suggestions basierend auf Konversationsstand
     const getQuickSuggestions = (): string[] => {
