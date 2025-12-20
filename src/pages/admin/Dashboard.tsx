@@ -14,7 +14,7 @@ import {
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
-import type { Specification, KnowledgeEntry } from '../../lib/database.types';
+import type { Specification } from '../../lib/database.types';
 
 interface Conversation {
     id: string;
