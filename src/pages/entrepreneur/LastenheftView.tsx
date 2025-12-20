@@ -53,6 +53,10 @@ const LastenheftView = () => {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
 
+    const handlePrint = () => {
+        window.print();
+    };
+
     const [lastenheft, setLastenheft] = useState<LastenheftData | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -299,9 +303,9 @@ const LastenheftView = () => {
     }
 
     return (
-        <div className="min-h-screen bg-gradient-to-b from-amber-50 to-white relative">
-            {/* Header */}
-            <header className="bg-white border-b border-amber-100 px-6 py-4 sticky top-0 z-10 shadow-sm">
+        <div className="min-h-screen bg-gradient-to-b from-amber-50 to-white relative print:bg-white print:min-h-0">
+            {/* Header - Hidden in Print */}
+            <header className="bg-white border-b border-amber-100 px-6 py-4 sticky top-0 z-10 shadow-sm print:hidden">
                 <div className="max-w-4xl mx-auto flex items-center justify-between">
                     <div className="flex items-center gap-4">
                         <button
@@ -326,17 +330,27 @@ const LastenheftView = () => {
                 </div>
             </header>
 
+            {/* Print Header - Visible only in Print */}
+            <div className="hidden print:block mb-8 border-b pb-4">
+                <h1 className="text-3xl font-bold text-gray-900 mb-2">Lastenheft: {lastenheft.title}</h1>
+                <div className="flex justify-between text-sm text-gray-500">
+                    <span>Erstellt: {new Date(lastenheft.created_at).toLocaleDateString('de-DE')}</span>
+                    <span>Status: {lastenheft.status}</span>
+                </div>
+            </div>
+
             {/* Content */}
-            <main className="max-w-4xl mx-auto px-6 py-8">
+            <main className="max-w-4xl mx-auto px-6 py-8 print:p-0 print:max-w-none">
                 {/* Titel & Zusammenfassung */}
-                <section className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 mb-6">
-                    <h2 className="text-2xl font-bold text-gray-900 mb-4">{lastenheft.title}</h2>
-                    <p className="text-gray-600 leading-relaxed">{lastenheft.problem_summary}</p>
+                <section className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 mb-6 print:shadow-none print:border-none print:p-0 print:mb-8">
+                    <h2 className="text-2xl font-bold text-gray-900 mb-4 print:hidden">{lastenheft.title}</h2>
+                    <h3 className="text-lg font-bold text-gray-900 mb-2 hidden print:block">Projektbeschreibung</h3>
+                    <p className="text-gray-600 leading-relaxed text-justify">{lastenheft.problem_summary}</p>
                 </section>
 
                 {/* Quick Stats */}
-                <section className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-                    <div className="bg-white rounded-xl p-4 border border-gray-100 shadow-sm">
+                <section className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6 print:grid-cols-4 print:gap-4 print:mb-8">
+                    <div className="bg-white rounded-xl p-4 border border-gray-100 shadow-sm print:border print:border-gray-200 print:shadow-none">
                         <div className="flex items-center gap-2 text-gray-500 mb-1">
                             <Building2 className="w-4 h-4" />
                             <span className="text-sm">Branche</span>
@@ -368,8 +382,8 @@ const LastenheftView = () => {
                     </div>
                 </section>
 
-                {/* DESIGN DRAFT OFFER - PROMINENT */}
-                <section className="bg-gradient-to-r from-slate-900 to-slate-800 rounded-2xl shadow-xl overflow-hidden mb-8 border border-slate-700">
+                {/* DESIGN DRAFT OFFER - PROMINENT - HIDDEN IN PRINT */}
+                <section className="bg-gradient-to-r from-slate-900 to-slate-800 rounded-2xl shadow-xl overflow-hidden mb-8 border border-slate-700 print:hidden">
                     <div className="p-8 flex flex-col md:flex-row items-center justify-between gap-6">
                         <div className="text-left">
                             <h3 className="text-2xl font-bold text-white mb-2">Visueller Entwurf gefällig?</h3>
@@ -395,14 +409,14 @@ const LastenheftView = () => {
                 {outcome && (
                     <section className="grid md:grid-cols-2 gap-6 mb-8">
                         {/* Tech Stack */}
-                        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+                        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 print:shadow-none print:border print:border-gray-200 print:break-inside-avoid">
                             <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
                                 <Zap className="w-5 h-5 text-amber-500" />
                                 Technischer Ansatz
                             </h3>
                             <div className="space-y-4">
                                 {outcome.techStack && Object.entries(outcome.techStack).map(([key, value]) => (
-                                    <div key={key} className="flex justify-between items-center text-sm border-b border-gray-50 pb-2">
+                                    <div key={key} className="flex justify-between items-center text-sm border-b border-gray-50 pb-2 print:border-gray-200">
                                         <span className="text-gray-500 capitalize">{key}</span>
                                         <span className="font-medium text-gray-900">{value as string}</span>
                                     </div>
@@ -411,7 +425,7 @@ const LastenheftView = () => {
                         </div>
 
                         {/* Definition of Done */}
-                        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+                        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 print:shadow-none print:border print:border-gray-200 print:break-inside-avoid">
                             <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
                                 <CheckCircle className="w-5 h-5 text-green-500" />
                                 Akzeptanzkriterien
@@ -419,7 +433,7 @@ const LastenheftView = () => {
                             <div className="space-y-2">
                                 {outcome.definitionOfDone && outcome.definitionOfDone.map((item: string, idx: number) => (
                                     <div key={idx} className="flex items-start gap-2 text-sm text-gray-700">
-                                        <div className="mt-1 w-1.5 h-1.5 bg-green-500 rounded-full flex-shrink-0" />
+                                        <div className="mt-1 w-1.5 h-1.5 bg-green-500 rounded-full flex-shrink-0 print:border print:border-green-600" />
                                         {item}
                                     </div>
                                 ))}
@@ -429,17 +443,17 @@ const LastenheftView = () => {
                 )}
 
                 {/* Anforderungen */}
-                <section className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 mb-6">
-                    <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+                <section className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 mb-6 print:shadow-none print:border-none print:p-0">
+                    <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2 print:mb-6">
                         <CheckCircle className="w-5 h-5 text-amber-500" />
                         Anforderungen
                     </h3>
-                    <div className="space-y-3">
+                    <div className="space-y-3 print:space-y-4">
                         {lastenheft.requirements && lastenheft.requirements.length > 0 ? (
                             lastenheft.requirements.map((req, idx) => (
                                 <div
                                     key={req.id || idx}
-                                    className="flex items-start gap-4 p-4 bg-gray-50 rounded-xl"
+                                    className="flex items-start gap-4 p-4 bg-gray-50 rounded-xl print:bg-white print:border print:border-gray-200 print:break-inside-avoid"
                                 >
                                     <span className="text-sm font-mono text-gray-400 mt-0.5">
                                         {req.id || `REQ-${String(idx + 1).padStart(3, '0')}`}
@@ -447,7 +461,7 @@ const LastenheftView = () => {
                                     <div className="flex-1">
                                         <div className="flex items-center gap-2 mb-1">
                                             <span className="text-sm font-medium text-gray-500">{req.category}</span>
-                                            <span className={`px-2 py-0.5 text-xs rounded-full border ${getPriorityColor(req.priority)}`}>
+                                            <span className={`px-2 py-0.5 text-xs rounded-full border ${getPriorityColor(req.priority)} print:border-gray-300 print:bg-gray-50 print:text-gray-700`}>
                                                 {getPriorityLabel(req.priority)}
                                             </span>
                                         </div>
@@ -461,8 +475,8 @@ const LastenheftView = () => {
                     </div>
                 </section>
 
-                {/* Kommentare */}
-                <section className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 mb-6">
+                {/* Kommentare - Hidden Input in Print */}
+                <section className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 mb-6 print:break-inside-avoid print:shadow-none print:border-none print:p-0">
                     <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
                         <MessageSquare className="w-5 h-5 text-amber-500" />
                         Kommentare & Anmerkungen
@@ -475,8 +489,8 @@ const LastenheftView = () => {
                                 <div
                                     key={comment.id}
                                     className={`p-4 rounded-xl ${comment.author === 'entrepreneur'
-                                        ? 'bg-amber-50 border border-amber-100'
-                                        : 'bg-gray-50 border border-gray-100'
+                                        ? 'bg-amber-50 border border-amber-100 print:bg-white print:border-gray-200'
+                                        : 'bg-gray-50 border border-gray-100 print:bg-white print:border-gray-200'
                                         }`}
                                 >
                                     <div className="flex items-center gap-2 mb-2">
@@ -491,14 +505,14 @@ const LastenheftView = () => {
                                 </div>
                             ))
                         ) : (
-                            <p className="text-gray-500 text-center py-4">
+                            <p className="text-gray-500 text-center py-4 print:hidden">
                                 Noch keine Kommentare. Haben Sie Anmerkungen?
                             </p>
                         )}
                     </div>
 
                     {/* Neuer Kommentar */}
-                    <div className="flex gap-3">
+                    <div className="flex gap-3 print:hidden">
                         <input
                             type="text"
                             value={newComment}
@@ -522,7 +536,7 @@ const LastenheftView = () => {
                 </section>
 
                 {/* Aktions-Buttons */}
-                <section className="flex flex-col sm:flex-row gap-4">
+                <section className="flex flex-col sm:flex-row gap-4 print:hidden">
                     {lastenheft.status !== 'approved' && (
                         <button
                             onClick={handleApprove}
@@ -538,11 +552,11 @@ const LastenheftView = () => {
                         </button>
                     )}
                     <button
-                        onClick={() => {/* TODO: PDF Export */ }}
-                        className="flex-1 flex items-center justify-center gap-2 px-6 py-4 bg-white border-2 border-gray-200 text-gray-700 rounded-xl font-semibold hover:bg-gray-50 transition-all"
+                        onClick={handlePrint}
+                        className="flex-1 flex items-center justify-center gap-2 px-6 py-4 bg-white border-2 border-gray-200 text-gray-700 rounded-xl font-semibold hover:bg-gray-50 transition-all print:hidden"
                     >
                         <Download className="w-5 h-5" />
-                        Als PDF herunterladen
+                        Als PDF drucken / speichern
                     </button>
                 </section>
             </main>
