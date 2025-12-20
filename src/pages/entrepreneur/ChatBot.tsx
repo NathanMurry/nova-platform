@@ -367,10 +367,10 @@ const ChatBot = () => {
                             className="w-full flex items-center justify-center gap-3 px-6 py-4 bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-xl font-semibold hover:from-green-600 hover:to-emerald-600 transition-all shadow-lg active:scale-[0.98]"
                         >
                             <FileText className="w-5 h-5" />
-                            Lastenheft erstellen
+                            Analyse abschließen & Lastenheft erstellen
                         </button>
                         <p className="text-center text-sm text-green-600 mt-2">
-                            Fasse das Gespräch in einem strukturierten Dokument zusammen
+                            Wir fassen alles zusammen. Gib uns kurz deine E-Mail, damit wir es dir schicken können.
                         </p>
                     </div>
                 </div>

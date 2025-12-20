@@ -65,15 +65,15 @@ const LandingPage = () => {
 
                     {/* Headline */}
                     <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold tracking-tight text-white mb-6 leading-tight">
-                        Beschreibe das System <br />
+                        Hinter jedem Problem <br />
                         <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-orange-500">
-                            hinter deinem Problem.
+                            steckt ein System.
                         </span>
                     </h1>
 
                     {/* Subheadline */}
                     <p className="text-xl text-slate-400 mb-12 max-w-2xl mx-auto leading-relaxed">
-                        Wir liefern die systematische IT-Lösung. Erzähl uns einfach, was nicht läuft – Nova analysiert, strukturiert und erstellt das Konzept für dich.
+                        Wir liefern die systematische IT-Lösung dafür. Erzähl uns einfach, was nicht läuft – Nova analysiert, strukturiert und schafft Klarheit.
                     </p>
 
                     {/* Chat Input - The Main Interaction */}
@@ -85,7 +85,7 @@ const LandingPage = () => {
                                 value={inputValue}
                                 onChange={(e) => setInputValue(e.target.value)}
                                 onKeyDown={(e) => e.key === 'Enter' && handleStartChat()}
-                                placeholder="Z.B.: 'Ich verliere den Überblick über meine Rechnungen...'"
+                                placeholder="Z.B.: 'Meine Lagerverwaltung ist pures Chaos...'"
                                 className="flex-1 bg-transparent border-none text-white placeholder-slate-500 px-4 py-3 focus:ring-0 text-lg outline-none w-full"
                                 autoFocus
                             />
@@ -97,13 +97,13 @@ const LandingPage = () => {
                             </button>
                         </div>
                         <p className="text-xs text-slate-500 mt-3 text-left pl-4">
-                            Drücke <strong>Enter</strong> um zu starten • Kostenlos & ohne Anmeldung
+                            Drücke <strong>Enter</strong> um zu starten • Sofort-Analyse deines Systems
                         </p>
                     </div>
 
                     {/* Target Groups */}
                     <div className="mt-20 pt-10 border-t border-white/5">
-                        <p className="text-slate-500 text-sm font-medium mb-6 uppercase tracking-wider">Lösungen für</p>
+                        <p className="text-slate-500 text-sm font-medium mb-6 uppercase tracking-wider">Erprobte Lösungen für</p>
                         <div className="flex flex-wrap justify-center gap-4">
                             {targetGroups.map((group, idx) => (
                                 <div key={idx} className="flex items-center gap-3 px-5 py-3 bg-white/5 rounded-xl border border-white/5 hover:bg-white/10 transition-colors cursor-default">
@@ -121,35 +121,50 @@ const LandingPage = () => {
                 <div className="absolute top-0 left-0 w-96 h-96 bg-blue-500/5 rounded-full blur-3xl -z-10"></div>
             </main>
 
-            {/* How it works - Minimal */}
+            {/* How it works - Step by Step */}
             <section className="py-24 bg-slate-900/50 border-t border-white/5">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <div className="grid md:grid-cols-3 gap-12">
-                        <div className="space-y-4">
-                            <div className="w-12 h-12 bg-slate-800 rounded-xl flex items-center justify-center border border-white/10">
+                    <div className="text-center mb-16">
+                        <h2 className="text-3xl font-bold text-white mb-4">Dein Weg zur perfekten IT-Lösung</h2>
+                        <p className="text-slate-400 max-w-2xl mx-auto">
+                            Kein Fachchinesisch, keine komplizierten Lastenhefte. Wir führen dich Schritt für Schritt durch den Prozess.
+                        </p>
+                    </div>
+                    <div className="grid md:grid-cols-4 gap-8">
+                        <div className="space-y-4 relative">
+                            <div className="w-12 h-12 bg-slate-800 rounded-xl flex items-center justify-center border border-white/10 shadow-lg">
                                 <span className="text-amber-500 font-bold text-xl">1</span>
                             </div>
-                            <h3 className="text-xl font-bold text-white">Problem analysieren</h3>
-                            <p className="text-slate-400 leading-relaxed">
-                                Unser AI-Architekt "Nova" stellt die richtigen Fragen, um den Kern deines Problems zu verstehen.
+                            <h3 className="text-xl font-bold text-white">Verständnis</h3>
+                            <p className="text-slate-400 text-sm leading-relaxed">
+                                Du erzählst dem Bot, was dich nervt. Wir analysieren das System hinter deinem Problem.
                             </p>
                         </div>
                         <div className="space-y-4">
-                            <div className="w-12 h-12 bg-slate-800 rounded-xl flex items-center justify-center border border-white/10">
+                            <div className="w-12 h-12 bg-slate-800 rounded-xl flex items-center justify-center border border-white/10 shadow-lg">
                                 <span className="text-amber-500 font-bold text-xl">2</span>
                             </div>
-                            <h3 className="text-xl font-bold text-white">Lösung konzipieren</h3>
-                            <p className="text-slate-400 leading-relaxed">
-                                Wir erstellen automatisch ein technisches Lastenheft und einen visuellen Design-Entwurf.
+                            <h3 className="text-xl font-bold text-white">Klarheit</h3>
+                            <p className="text-slate-400 text-sm leading-relaxed">
+                                Du erhältst ein professionelles Lastenheft, das deine Anforderungen perfekt auf den Punkt bringt.
                             </p>
                         </div>
                         <div className="space-y-4">
-                            <div className="w-12 h-12 bg-slate-800 rounded-xl flex items-center justify-center border border-white/10">
+                            <div className="w-12 h-12 bg-slate-800 rounded-xl flex items-center justify-center border border-white/10 shadow-lg">
                                 <span className="text-amber-500 font-bold text-xl">3</span>
                             </div>
-                            <h3 className="text-xl font-bold text-white">System bauen</h3>
-                            <p className="text-slate-400 leading-relaxed">
-                                Erst wenn der Plan steht, vermitteln wir handverlesene Entwickler für die Umsetzung.
+                            <h3 className="text-xl font-bold text-white">Vision</h3>
+                            <p className="text-slate-400 text-sm leading-relaxed">
+                                Wir erstellen einen maßgeschneiderten, visuellen Entwurf (Mockup) deiner zukünftigen Software.
+                            </p>
+                        </div>
+                        <div className="space-y-4">
+                            <div className="w-12 h-12 bg-slate-800 rounded-xl flex items-center justify-center border border-white/10 shadow-lg">
+                                <span className="text-amber-500 font-bold text-xl">4</span>
+                            </div>
+                            <h3 className="text-xl font-bold text-white">Umsetzung</h3>
+                            <p className="text-slate-400 text-sm leading-relaxed">
+                                Dein Auftrag geht an Experten auf unserer Börse, die deine Lösung schnell und zuverlässig bauen.
                             </p>
                         </div>
                     </div>

@@ -364,14 +364,14 @@ const LastenheftView = () => {
                             </p>
                         </div>
                         <div className="flex flex-col items-center">
-                            <span className="text-3xl font-bold text-amber-400 mb-2">19,50 €</span>
+                            <span className="text-3xl font-bold text-amber-400 mb-2">199 €</span>
                             <button
                                 onClick={handleOrderDraft}
                                 className="px-8 py-3 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-full font-bold hover:from-amber-600 hover:to-orange-600 transition-all shadow-lg hover:shadow-amber-500/25 transform hover:-translate-y-1 whitespace-nowrap"
                             >
                                 Jetzt Entwurf anfordern
                             </button>
-                            <span className="text-xs text-slate-500 mt-2">Innerhalb von 24h • Zahlung auf Rechnung</span>
+                            <span className="text-xs text-slate-500 mt-2">Innerhalb von 24h • Professionelles Mockup</span>
                         </div>
                     </div>
                 </section>
@@ -507,9 +507,9 @@ const LastenheftView = () => {
                             Wir erstellen Ihren individuellen Design-Entwurf. Sie erhalten diesen <strong>innerhalb von 24 Stunden per E-Mail</strong> an <em>{contactEmail}</em>.
                         </p>
                         <div className="bg-blue-50 border border-blue-100 p-4 rounded-xl mb-8 text-left">
-                            <p className="text-sm text-blue-800 mb-2"><strong>ℹ️ Bezahlung:</strong></p>
+                            <p className="text-sm text-blue-800 mb-2"><strong>ℹ️ Nächste Schritte:</strong></p>
                             <p className="text-sm text-blue-700">
-                                Sie erhalten die Rechnung über 19,50 € erst zusammen mit dem fertigen Entwurf. Sie zahlen nur, wenn Sie den Entwurf erhalten haben.
+                                Wir erstellen nun Ihren individuellen Design-Entwurf für 199 €. Sie erhalten innerhalb von 24 Stunden eine Vorschau und die Rechnung per E-Mail.
                             </p>
                         </div>
                         <button
