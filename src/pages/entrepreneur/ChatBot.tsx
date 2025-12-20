@@ -214,7 +214,7 @@ const ChatBot = () => {
 
     // Zeige Lastenheft-Button nach genug Nachrichten
     useEffect(() => {
-        if (messages.length >= 6) {
+        if (messages.length >= 10) {
             setShowLastenheftButton(true);
         }
     }, [messages]);
