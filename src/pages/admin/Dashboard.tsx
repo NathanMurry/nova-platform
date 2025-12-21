@@ -72,53 +72,76 @@ const Dashboard = () => {
         setIsLoading(true);
         setLoadError(null);
 
+        // 1. Gespräche laden & Cleanup von leeren Chats
         try {
-            // 1. Gespräche laden
             const { data: convData, error: convError } = await supabase
                 .from('conversations')
                 .select('*, specifications(project_number)')
                 .order('created_at', { ascending: false });
 
-            if (convError) {
-                console.error('Conv Error:', convError);
-                // Fallback ohne Join falls Join fehlschlägt
+            if (convError) throw convError;
+
+            const allConvs = convData || [];
+
+            // Finde Gespräche ohne Benutzer-Eingabe (nur Bot-Begrüßung oder leer)
+            const validConvs = allConvs.filter(c => c.messages?.some((m: any) => m.type === 'user'));
+            const emptyIds = allConvs
+                .filter(c => !c.messages?.some((m: any) => m.type === 'user'))
+                .map(c => c.id);
+
+            // Lösche leere Gespräche im Hintergrund
+            if (emptyIds.length > 0) {
+                console.log(`Cleaning up ${emptyIds.length} empty conversations...`);
+                supabase.from('conversations').delete().in('id', emptyIds).then(() => {
+                    console.log('Cleanup complete');
+                });
+            }
+
+            // Validierte Gespräche sortieren
+            const sortedByPNumber = validConvs.sort((a: any, b: any) => {
+                const pA = a.specifications?.[0]?.project_number || 'ZZZ';
+                const pB = b.specifications?.[0]?.project_number || 'ZZZ';
+                return pA.localeCompare(pB);
+            });
+            setConversations(sortedByPNumber);
+        } catch (err: any) {
+            console.error('Conv Error:', err);
+            try {
                 const { data: convDataSimple } = await supabase
                     .from('conversations')
                     .select('*')
                     .order('created_at', { ascending: false });
-                setConversations(convDataSimple || []);
-            } else {
-                // Client-seitig nach Projektnummer sortieren (falls vorhanden)
-                const sortedByPNumber = (convData || []).sort((a: any, b: any) => {
-                    const pA = a.specifications?.[0]?.project_number || 'ZZZ';
-                    const pB = b.specifications?.[0]?.project_number || 'ZZZ';
-                    return pA.localeCompare(pB);
-                });
-                setConversations(sortedByPNumber);
-            }
 
-            // 2. Lastenhefte laden
+                const validSimple = (convDataSimple || []).filter(c => c.messages?.some((m: any) => m.type === 'user'));
+                setConversations(validSimple);
+            } catch (e) {
+                setLoadError('Leads konnten nicht geladen werden.');
+            }
+        }
+
+        // 2. Lastenhefte laden
+        try {
             const { data: specData, error: specError } = await supabase
                 .from('specifications')
                 .select('*')
-                .order('project_number', { ascending: false, nullsFirst: false })
                 .order('created_at', { ascending: false });
 
-            if (specError) console.error('Spec Error:', specError);
+            if (specError) throw specError;
+            console.log('Loaded specs:', specData?.length);
             setSpecifications(specData || []);
+        } catch (err: any) {
+            console.error('Spec Error:', err);
+            setLoadError(prev => prev ? prev + ' | Lastenhefte Fehler' : 'Lastenhefte konnten nicht geladen werden.');
+        }
 
-            // 3. Support-Nachrichten laden (Optional, da messages evtl. noch nicht existiert)
-            try {
-                const { data: msgData, error: msgError } = await supabase
-                    .from('messages')
-                    .select('*, specifications(project_number, title)')
-                    .order('created_at', { ascending: false });
-                if (!msgError) setSupportMessages(msgData || []);
-            } catch (e) {
-                console.warn('Messages table might not exist yet');
-            }
+        // 3. Support & Stats
+        try {
+            const { data: msgData } = await supabase
+                .from('messages')
+                .select('*, specifications(project_number, title)')
+                .order('created_at', { ascending: false });
+            setSupportMessages(msgData || []);
 
-            // 4. Stats holen
             const results = await Promise.all([
                 supabase.from('conversations').select('*', { count: 'exact', head: true }),
                 supabase.from('conversations').select('*', { count: 'exact', head: true }).eq('status', 'active'),
@@ -135,13 +158,11 @@ const Dashboard = () => {
                 paidDesigns: results[4].count || 0,
                 revenue: (results[4].count || 0) * 199
             });
-
         } catch (err: any) {
-            console.error('Kritischer Fehler beim Laden:', err);
-            setLoadError(err.message);
-        } finally {
-            setIsLoading(false);
+            console.warn('Stats/Support Error:', err);
         }
+
+        setIsLoading(false);
     };
 
     const toggleReference = async (id: string, currentStatus: boolean) => {
@@ -477,79 +498,104 @@ const Dashboard = () => {
                             </div>
                         ) : activeTab === 'specifications' ? (
                             <div className="divide-y divide-gray-100">
-                                {specifications.filter(s => {
+                                <div className="px-6 py-2 bg-slate-50 text-[10px] text-slate-400 font-mono flex justify-between">
+                                    <span>System: Specifications Explorer</span>
+                                    <span>Total: {specifications.length} Entries</span>
+                                </div>
+                                {specifications.length === 0 ? (
+                                    <div className="p-12 text-center text-gray-500">Keine Lastenhefte gefunden.</div>
+                                ) : specifications.filter(s => {
                                     if (!searchQuery) return true;
                                     const searchLower = searchQuery.toLowerCase();
                                     const pNum = s.project_number || '';
                                     const title = s.title || '';
                                     return pNum.toLowerCase().includes(searchLower) ||
                                         title.toLowerCase().includes(searchLower);
-                                }).map(spec => (
-                                    <div key={spec.id} className="px-6 py-4 hover:bg-gray-50 transition-colors">
-                                        <div className="flex items-start justify-between">
-                                            <div className="flex-1 cursor-pointer" onClick={() => navigate(`/lastenheft/${spec.id}`, { state: { fromAdmin: true } })}>
-                                                <div className="flex items-center gap-3 mb-1">
-                                                    <span className="font-medium text-gray-900">{spec.title || 'Ohne Titel'}</span>
-                                                    {spec.project_number && <span className="bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded text-xs font-mono">{spec.project_number}</span>}
-                                                    {getStatusBadge(spec.status)}
+                                }).length === 0 ? (
+                                    <div className="p-12 text-center text-gray-500">Keine passenden Lastenhefte für "{searchQuery}".</div>
+                                ) : (
+                                    specifications.filter(s => {
+                                        if (!searchQuery) return true;
+                                        const searchLower = searchQuery.toLowerCase();
+                                        const pNum = s.project_number || '';
+                                        const title = s.title || '';
+                                        return pNum.toLowerCase().includes(searchLower) ||
+                                            title.toLowerCase().includes(searchLower);
+                                    }).map(spec => (
+                                        <div key={spec.id} className="px-6 py-4 hover:bg-gray-50 transition-colors">
+                                            <div className="flex items-start justify-between">
+                                                <div className="flex-1 cursor-pointer" onClick={() => navigate(`/lastenheft/${spec.id}`, { state: { fromAdmin: true } })}>
+                                                    <div className="flex items-center gap-3 mb-1">
+                                                        <span className="font-medium text-gray-900">{spec.title || 'Ohne Titel'}</span>
+                                                        {spec.project_number && <span className="bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded text-xs font-mono">{spec.project_number}</span>}
+                                                        {getStatusBadge(spec.status)}
+                                                    </div>
+                                                    <p className="text-sm text-gray-500">{spec.problem_summary?.slice(0, 100)}...</p>
                                                 </div>
-                                                <p className="text-sm text-gray-500">{spec.problem_summary?.slice(0, 100)}...</p>
-                                            </div>
-                                            <div className="flex items-center gap-2">
-                                                <button onClick={(e) => { e.stopPropagation(); handleOpenKnowledgeModal(spec); }} className="p-2 text-gray-400 hover:text-amber-500 hover:bg-amber-50 rounded-full transition-colors" title="In Wissensdatenbank aufnehmen">
-                                                    <Database className="w-5 h-5" />
-                                                </button>
-                                                <ExternalLink className="w-4 h-4 text-gray-400" />
+                                                <div className="flex items-center gap-2">
+                                                    <button onClick={(e) => { e.stopPropagation(); handleOpenKnowledgeModal(spec); }} className="p-2 text-gray-400 hover:text-amber-500 hover:bg-amber-50 rounded-full transition-colors" title="In Wissensdatenbank aufnehmen">
+                                                        <Database className="w-5 h-5" />
+                                                    </button>
+                                                    <ExternalLink className="w-4 h-4 text-gray-400" />
+                                                </div>
                                             </div>
                                         </div>
-                                    </div>
-                                ))}
+                                    ))
+                                )}
                             </div>
                         ) : activeTab === 'pipeline' ? (
                             <div className="divide-y divide-gray-100">
                                 <div className="bg-slate-50 px-6 py-2 text-xs font-bold text-slate-400 uppercase tracking-wider">Design Phase (Bezahlt)</div>
-                                {specifications.filter(s => s.is_design_paid && !s.released_to_dev)
-                                    .sort((a, b) => (a.design_url === b.design_url) ? 0 : a.design_url ? 1 : -1)
-                                    .map(spec => (
-                                        <div key={spec.id} className={`px-6 py-4 flex items-center justify-between border-l-4 ${!spec.design_url ? 'border-red-500 bg-red-50/30' : 'border-amber-500'}`}>
-                                            <div className="flex-1">
-                                                <div className="flex items-center gap-2 mb-1">
-                                                    <p className="font-bold text-slate-900">{spec.project_number}</p>
-                                                    {!spec.design_url && <span className="px-2 py-0.5 bg-red-600 text-white text-[10px] uppercase font-black rounded-sm animate-pulse">Handlungsbedarf (24h)</span>}
+                                {specifications.filter(s => s.is_design_paid && !s.released_to_dev).length === 0 ? (
+                                    <div className="p-8 text-center text-gray-400 text-sm">Keine Projekte in der Design-Phase.</div>
+                                ) : (
+                                    specifications.filter(s => s.is_design_paid && !s.released_to_dev)
+                                        .sort((a, b) => (a.design_url === b.design_url) ? 0 : a.design_url ? 1 : -1)
+                                        .map(spec => (
+                                            <div key={spec.id} className={`px-6 py-4 flex items-center justify-between border-l-4 ${!spec.design_url ? 'border-red-500 bg-red-50/30' : 'border-amber-500'}`}>
+                                                <div className="flex-1">
+                                                    <div className="flex items-center gap-2 mb-1">
+                                                        <p className="font-bold text-slate-900">{spec.project_number}</p>
+                                                        {!spec.design_url && <span className="px-2 py-0.5 bg-red-600 text-white text-[10px] uppercase font-black rounded-sm animate-pulse">Handlungsbedarf (24h)</span>}
+                                                    </div>
+                                                    <p className="text-sm text-slate-500">{spec.title}</p>
                                                 </div>
+                                                <div className="flex items-center gap-4">
+                                                    <div className="relative">
+                                                        <input
+                                                            type="text"
+                                                            placeholder="Figma/Design URL..."
+                                                            className="px-3 py-2 text-sm border border-slate-200 rounded-lg w-72 focus:ring-2 focus:ring-amber-200 outline-none"
+                                                            defaultValue={spec.design_url || ''}
+                                                            onBlur={async (e) => {
+                                                                if (e.target.value === spec.design_url) return;
+                                                                await supabase.from('specifications').update({ design_url: e.target.value }).eq('id', spec.id);
+                                                                loadData();
+                                                            }}
+                                                        />
+                                                        {!spec.design_url && <div className="absolute -right-1 -top-1 w-3 h-3 bg-red-500 rounded-full border-2 border-white shadow-sm" />}
+                                                    </div>
+                                                    <span className={`px-3 py-1 text-xs font-bold rounded-full ${!spec.design_url ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'}`}>
+                                                        {spec.design_url ? 'In Revision' : 'Wartet auf Design'}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        ))
+                                )}
+                                <div className="bg-slate-50 px-6 py-2 text-xs font-bold text-slate-400 uppercase tracking-wider mt-4">Marktplatz (Börse)</div>
+                                {specifications.filter(s => s.released_to_dev).length === 0 ? (
+                                    <div className="p-8 text-center text-gray-400 text-sm">Keine Projekte live an der Börse.</div>
+                                ) : (
+                                    specifications.filter(s => s.released_to_dev).map(spec => (
+                                        <div key={spec.id} className="px-6 py-4 flex items-center justify-between border-l-4 border-green-500">
+                                            <div>
+                                                <p className="font-bold text-slate-900">{spec.project_number}</p>
                                                 <p className="text-sm text-slate-500">{spec.title}</p>
                                             </div>
-                                            <div className="flex items-center gap-4">
-                                                <div className="relative">
-                                                    <input
-                                                        type="text"
-                                                        placeholder="Figma/Design URL..."
-                                                        className="px-3 py-2 text-sm border border-slate-200 rounded-lg w-72 focus:ring-2 focus:ring-amber-200 outline-none"
-                                                        defaultValue={spec.design_url || ''}
-                                                        onBlur={async (e) => {
-                                                            if (e.target.value === spec.design_url) return;
-                                                            await supabase.from('specifications').update({ design_url: e.target.value }).eq('id', spec.id);
-                                                            loadData();
-                                                        }}
-                                                    />
-                                                    {!spec.design_url && <div className="absolute -right-1 -top-1 w-3 h-3 bg-red-500 rounded-full border-2 border-white shadow-sm" />}
-                                                </div>
-                                                <span className={`px-3 py-1 text-xs font-bold rounded-full ${!spec.design_url ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'}`}>
-                                                    {spec.design_url ? 'In Revision' : 'Wartet auf Design'}
-                                                </span>
-                                            </div>
+                                            <span className="px-3 py-1 bg-green-100 text-green-700 text-xs font-bold rounded-full">Live an Börse</span>
                                         </div>
-                                    ))}
-                                <div className="bg-slate-50 px-6 py-2 text-xs font-bold text-slate-400 uppercase tracking-wider mt-4">Marktplatz (Börse)</div>
-                                {specifications.filter(s => s.released_to_dev).map(spec => (
-                                    <div key={spec.id} className="px-6 py-4 flex items-center justify-between border-l-4 border-green-500">
-                                        <div>
-                                            <p className="font-bold text-slate-900">{spec.project_number}</p>
-                                            <p className="text-sm text-slate-500">{spec.title}</p>
-                                        </div>
-                                        <span className="px-3 py-1 bg-green-100 text-green-700 text-xs font-bold rounded-full">Live an Börse</span>
-                                    </div>
-                                ))}
+                                    ))
+                                )}
                             </div>
                         ) : activeTab === 'support' ? (
                             <div className="divide-y divide-gray-100">
