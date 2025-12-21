@@ -63,6 +63,13 @@ CREATE TABLE IF NOT EXISTS specifications (
     team_size TEXT,
     budget_range TEXT, -- z.B. '50-100€/Monat', '100-250€/Monat'
     desired_outcome TEXT, -- z.B. '5h pro Woche sparen'
+    
+    -- Projekt-Management Felder
+    design_url TEXT, -- Link zu Figma/Entwurf
+    is_design_paid BOOLEAN DEFAULT FALSE,
+    released_to_dev BOOLEAN DEFAULT FALSE,
+    dev_notes TEXT,
+    
     status TEXT DEFAULT 'draft' CHECK (status IN ('draft', 'review', 'approved', 'in_progress', 'completed')),
     comments JSONB DEFAULT '[]'::jsonb, -- Array von {id, author, content, timestamp}
     created_at TIMESTAMPTZ DEFAULT NOW(),
@@ -141,6 +148,21 @@ CREATE TABLE IF NOT EXISTS knowledge_base (
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+-- 7. SUPPORT-MESSAGES (messages)
+-- =====================================================
+CREATE TABLE IF NOT EXISTS messages (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    specification_id UUID REFERENCES specifications(id) ON DELETE CASCADE,
+    sender_role TEXT NOT NULL CHECK (sender_role IN ('admin', 'customer', 'developer')),
+    receiver_role TEXT NOT NULL CHECK (receiver_role IN ('admin', 'customer', 'developer')),
+    content TEXT NOT NULL,
+    is_read BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Indizes
+CREATE INDEX IF NOT EXISTS idx_messages_spec ON messages(specification_id);
 
 CREATE INDEX IF NOT EXISTS idx_knowledge_embedding ON knowledge_base USING ivfflat (embedding vector_cosine_ops)
     WITH (lists = 100);
@@ -245,6 +267,7 @@ ALTER TABLE specifications ENABLE ROW LEVEL SECURITY;
 ALTER TABLE drafts ENABLE ROW LEVEL SECURITY;
 ALTER TABLE orders ENABLE ROW LEVEL SECURITY;
 ALTER TABLE knowledge_base ENABLE ROW LEVEL SECURITY;
+ALTER TABLE messages ENABLE ROW LEVEL SECURITY;
 
 -- 1. UNTERNEHMER: Eigene Daten sehen
 DROP POLICY IF EXISTS "Users can view own data" ON entrepreneurs;
@@ -284,6 +307,15 @@ CREATE POLICY "Anyone can view knowledge" ON knowledge_base
 
 DROP POLICY IF EXISTS "Anyone can insert matching results" ON knowledge_base;
 CREATE POLICY "Anyone can insert matching results" ON knowledge_base
+    FOR INSERT WITH CHECK (true);
+
+-- 5. MESSAGES: Admin sieht alles, Kunde nur seine
+DROP POLICY IF EXISTS "Allow selection for all messages" ON messages;
+CREATE POLICY "Allow selection for all messages" ON messages
+    FOR SELECT USING (true);
+
+DROP POLICY IF EXISTS "Allow insert for all messages" ON messages;
+CREATE POLICY "Allow insert for all messages" ON messages
     FOR INSERT WITH CHECK (true);
 
 -- =====================================================

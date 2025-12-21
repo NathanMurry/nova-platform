@@ -70,63 +70,74 @@ const Dashboard = () => {
 
     const loadData = async () => {
         setIsLoading(true);
+        setLoadError(null);
 
         try {
-            // 1. Gespräche laden (mit Projektnummer falls vorhanden)
-            const { data: convData } = await supabase
+            // 1. Gespräche laden
+            const { data: convData, error: convError } = await supabase
                 .from('conversations')
                 .select('*, specifications(project_number)')
                 .order('created_at', { ascending: false });
 
-            // Client-seitig nach Projektnummer sortieren (falls vorhanden)
-            const sortedByPNumber = (convData || []).sort((a: any, b: any) => {
-                const pA = a.specifications?.[0]?.project_number || 'ZZZ';
-                const pB = b.specifications?.[0]?.project_number || 'ZZZ';
-                return pA.localeCompare(pB);
-            });
-            setConversations(sortedByPNumber);
+            if (convError) {
+                console.error('Conv Error:', convError);
+                // Fallback ohne Join falls Join fehlschlägt
+                const { data: convDataSimple } = await supabase
+                    .from('conversations')
+                    .select('*')
+                    .order('created_at', { ascending: false });
+                setConversations(convDataSimple || []);
+            } else {
+                // Client-seitig nach Projektnummer sortieren (falls vorhanden)
+                const sortedByPNumber = (convData || []).sort((a: any, b: any) => {
+                    const pA = a.specifications?.[0]?.project_number || 'ZZZ';
+                    const pB = b.specifications?.[0]?.project_number || 'ZZZ';
+                    return pA.localeCompare(pB);
+                });
+                setConversations(sortedByPNumber);
+            }
 
-            // 2. Lastenhefte laden (Sortierung: Projektnummer DESC, dann Datum DESC)
-            const { data: specData } = await supabase
+            // 2. Lastenhefte laden
+            const { data: specData, error: specError } = await supabase
                 .from('specifications')
                 .select('*')
                 .order('project_number', { ascending: false, nullsFirst: false })
                 .order('created_at', { ascending: false });
+
+            if (specError) console.error('Spec Error:', specError);
             setSpecifications(specData || []);
 
-            // 3. Support-Nachrichten laden
-            const { data: msgData } = await supabase
-                .from('messages')
-                .select('*, specifications(project_number, title)')
-                .order('created_at', { ascending: false });
-            setSupportMessages(msgData || []);
+            // 3. Support-Nachrichten laden (Optional, da messages evtl. noch nicht existiert)
+            try {
+                const { data: msgData, error: msgError } = await supabase
+                    .from('messages')
+                    .select('*, specifications(project_number, title)')
+                    .order('created_at', { ascending: false });
+                if (!msgError) setSupportMessages(msgData || []);
+            } catch (e) {
+                console.warn('Messages table might not exist yet');
+            }
 
-            // 4. Echte Stats holen
-            const [
-                { count: totalConvs },
-                { count: activeConvs },
-                { count: totalSpecs },
-                { count: approvedSpecs },
-                { count: paidDesigns }
-            ] = await Promise.all([
+            // 4. Stats holen
+            const results = await Promise.all([
                 supabase.from('conversations').select('*', { count: 'exact', head: true }),
                 supabase.from('conversations').select('*', { count: 'exact', head: true }).eq('status', 'active'),
                 supabase.from('specifications').select('*', { count: 'exact', head: true }),
                 supabase.from('specifications').select('*', { count: 'exact', head: true }).eq('status', 'approved'),
-                supabase.from('specifications').select('*', { count: 'exact', head: true }).eq('is_design_paid', true)
+                supabase.from('specifications').select('*', { count: 'exact', head: true }).eq('is_design_paid', true).catch(() => ({ count: 0 }))
             ]);
 
             setStats({
-                totalConversations: totalConvs || 0,
-                activeConversations: activeConvs || 0,
-                totalSpecifications: totalSpecs || 0,
-                approvedSpecifications: approvedSpecs || 0,
-                paidDesigns: paidDesigns || 0,
-                revenue: (paidDesigns || 0) * 199 // Einfache Dummy-Rechnung
+                totalConversations: results[0].count || 0,
+                activeConversations: results[1].count || 0,
+                totalSpecifications: results[2].count || 0,
+                approvedSpecifications: results[3].count || 0,
+                paidDesigns: results[4]?.count || 0,
+                revenue: (results[4]?.count || 0) * 199
             });
 
         } catch (err: any) {
-            console.error('Fehler beim Laden:', err);
+            console.error('Kritischer Fehler beim Laden:', err);
             setLoadError(err.message);
         } finally {
             setIsLoading(false);
