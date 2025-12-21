@@ -86,11 +86,12 @@ const Dashboard = () => {
             });
             setConversations(sortedByPNumber);
 
-            // 2. Lastenhefte laden und nach Projektnummer sortieren
+            // 2. Lastenhefte laden (Sortierung: Projektnummer DESC, dann Datum DESC)
             const { data: specData } = await supabase
                 .from('specifications')
                 .select('*')
-                .order('project_number', { ascending: false });
+                .order('project_number', { ascending: false, nullsFirst: false })
+                .order('created_at', { ascending: false });
             setSpecifications(specData || []);
 
             // 3. Support-Nachrichten laden
@@ -403,10 +404,20 @@ const Dashboard = () => {
                             <div className="p-12 text-center text-gray-500">Laden...</div>
                         ) : activeTab === 'leads' ? (
                             <div className="divide-y divide-gray-100">
-                                {conversations.filter(c => c.id.includes(searchQuery)).length === 0 ? (
+                                {conversations.filter(c => {
+                                    if (!searchQuery) return true;
+                                    const pNum = (c as any).specifications?.[0]?.project_number || '';
+                                    return c.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                                        pNum.toLowerCase().includes(searchQuery.toLowerCase());
+                                }).length === 0 ? (
                                     <div className="p-12 text-center text-gray-500">Keine passenden Leads gefunden.</div>
                                 ) : (
-                                    conversations.filter(c => c.id.includes(searchQuery)).map(conv => (
+                                    conversations.filter(c => {
+                                        if (!searchQuery) return true;
+                                        const pNum = (c as any).specifications?.[0]?.project_number || '';
+                                        return c.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                                            pNum.toLowerCase().includes(searchQuery.toLowerCase());
+                                    }).map(conv => (
                                         <div key={conv.id} className="border-b border-gray-100 last:border-0 hover:bg-gray-50 transition-colors">
                                             <div className="px-6 py-4 flex items-center justify-between cursor-pointer" onClick={() => setExpandedConvId(expandedConvId === conv.id ? null : conv.id)}>
                                                 <div className="flex items-center gap-4">
@@ -450,7 +461,12 @@ const Dashboard = () => {
                             </div>
                         ) : activeTab === 'specifications' ? (
                             <div className="divide-y divide-gray-100">
-                                {specifications.filter(s => s.project_number?.includes(searchQuery) || s.title?.includes(searchQuery)).map(spec => (
+                                {specifications.filter(s => {
+                                    if (!searchQuery) return true;
+                                    const searchLower = searchQuery.toLowerCase();
+                                    return (s.project_number?.toLowerCase().includes(searchLower)) ||
+                                        (s.title?.toLowerCase().includes(searchLower));
+                                }).map(spec => (
                                     <div key={spec.id} className="px-6 py-4 hover:bg-gray-50 transition-colors">
                                         <div className="flex items-start justify-between">
                                             <div className="flex-1 cursor-pointer" onClick={() => navigate(`/lastenheft/${spec.id}`, { state: { fromAdmin: true } })}>
