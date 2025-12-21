@@ -55,6 +55,7 @@ export interface Database {
                     entrepreneur_id: string | null;
                     messages: ConversationMessage[];
                     status: 'active' | 'completed' | 'abandoned';
+                    is_reference: boolean;
                     created_at: string;
                     completed_at: string | null;
                 };
@@ -63,12 +64,14 @@ export interface Database {
                     entrepreneur_id?: string | null;
                     messages?: ConversationMessage[];
                     status?: 'active' | 'completed' | 'abandoned';
+                    is_reference?: boolean;
                     created_at?: string;
                     completed_at?: string | null;
                 };
                 Update: {
                     messages?: ConversationMessage[];
                     status?: 'active' | 'completed' | 'abandoned';
+                    is_reference?: boolean;
                     completed_at?: string | null;
                 };
             };

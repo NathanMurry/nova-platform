@@ -15,6 +15,8 @@ const ChatBot = () => {
     const navigate = useNavigate();
     const location = useLocation();
     const messagesEndRef = useRef<HTMLDivElement>(null);
+    const inputRef = useRef<HTMLInputElement>(null);
+    const isInitialized = useRef(false);
 
     // Supabase State
     const [conversationId, setConversationId] = useState<string | null>(null);
@@ -34,6 +36,9 @@ const ChatBot = () => {
     // Initialisierung: Gemini Begrüßung holen
     useEffect(() => {
         const initChat = async () => {
+            if (isInitialized.current) return;
+            isInitialized.current = true;
+
             // Check for passed initial message from landing page
             const state = location.state as { initialMessage?: string } | null;
 
@@ -62,45 +67,50 @@ const ChatBot = () => {
             setIsLoading(false);
         };
 
-        // Only run once on mount
         initChat();
     }, []);
 
-    // Supabase Konversation erstellen
-    useEffect(() => {
-        const createConversation = async () => {
-            if (messages.length === 0) return;
+    // Supabase Konversation erstellen - interne Funktion für Wiederverwendung
+    const createConversationInternal = async (currentMessages: Message[]) => {
+        if (currentMessages.length === 0 || conversationId) return null;
 
-            try {
-                const { data, error } = await supabase
-                    .from('conversations')
-                    .insert({
-                        entrepreneur_id: null,
-                        messages: messages.map(msg => ({
-                            type: msg.type,
-                            content: msg.content,
-                            timestamp: new Date().toISOString()
-                        })),
-                        status: 'active'
-                    })
-                    .select()
-                    .single();
+        try {
+            const { data, error } = await supabase
+                .from('conversations')
+                .insert({
+                    entrepreneur_id: null,
+                    messages: currentMessages.map(msg => ({
+                        type: msg.type,
+                        content: msg.content,
+                        timestamp: new Date().toISOString()
+                    })),
+                    status: 'active'
+                })
+                .select()
+                .single();
 
-                if (error) {
-                    console.warn('Konversation konnte nicht erstellt werden:', error.message);
-                } else if (data) {
-                    setConversationId(data.id);
-                    console.log('✅ Neue Konversation erstellt:', data.id);
-                }
-            } catch (err) {
-                console.warn('Supabase nicht verfügbar');
+            if (error) {
+                console.error('Konversation konnte nicht erstellt werden:', error.message);
+                return null;
             }
-        };
 
-        if (messages.length === 1 && !conversationId) {
-            createConversation();
+            if (data) {
+                setConversationId(data.id);
+                console.log('✅ Neue Konversation erstellt:', data.id);
+                return data.id;
+            }
+        } catch (err) {
+            console.error('Supabase Fehler:', err);
         }
-    }, [messages, conversationId]);
+        return null;
+    };
+
+    // Supabase Konversation initial erstellen
+    useEffect(() => {
+        if (messages.length > 0 && !conversationId && !isTyping) {
+            createConversationInternal(messages);
+        }
+    }, [messages, conversationId, isTyping]);
 
     // Speichere Nachrichten in Supabase
     const saveMessages = useCallback(async (newMessages: Message[]) => {
@@ -129,9 +139,10 @@ const ChatBot = () => {
         }
     }, [conversationId]);
 
-    // Auto-save bei neuen Nachrichten
+    // Auto-save bei neuen Nachrichten (aber nicht beim allerersten Render)
     useEffect(() => {
-        if (messages.length > 1 && conversationId) {
+        if (messages.length > 0 && conversationId) {
+            // Debounce oder direkt speichern? Hier direkt, Nachrichtenfrequenz ist niedrig.
             saveMessages(messages);
         }
     }, [messages, saveMessages, conversationId]);
@@ -141,10 +152,20 @@ const ChatBot = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, [messages]);
 
+    // Auto-focus input when bot finishes typing
+    useEffect(() => {
+        if (!isTyping && !isLoading) {
+            inputRef.current?.focus();
+        }
+    }, [isTyping, isLoading]);
+
     // Nachricht senden mit Gemini
     const handleSend = async (message?: string) => {
         const messageToSend = message || inputValue;
-        if (!messageToSend.trim() || isTyping) return;
+        if (!messageToSend.trim()) return;
+
+        // Prevent double submit if already processing
+        if (isTyping) return;
 
         // User-Nachricht hinzufügen
         setMessages(prev => [...prev, { type: 'user', content: messageToSend }]);
@@ -155,10 +176,11 @@ const ChatBot = () => {
             // Gemini Antwort holen
             let response = await sendMessage(messageToSend);
 
-            // Check if analysis is complete (trigger for spec button)
+            // Prüfen ob Inspiration genutzt wurde (diskret für das UI)
+            // Wir können das über ein spezielles Markup im sendMessage prüfen oder einfach global setzen
+            // Hier nutzen wir eine einfache Heuristik: Wenn die Antwort Fachbegriffe enthält oder wir es im State wissen
             if (response.includes('[ANALYSIS_COMPLETE]')) {
                 setShowLastenheftButton(true);
-                // Clean the tag from the UI response
                 response = response.replace('[ANALYSIS_COMPLETE]', '').trim();
             }
 
@@ -175,9 +197,25 @@ const ChatBot = () => {
 
     // Lastenheft generieren
     const handleGenerateLastenheft = async () => {
-        if (!conversationId || messages.length < 4) return;
-
         setIsGeneratingLastenheft(true);
+
+        let currentId = conversationId;
+
+        // Fallback: Wenn noch keine ID da ist, versuchen wir sie JETZT zu erstellen
+        if (!currentId) {
+            console.log('🔄 Fallback: Erstelle Konversation on-the-fly...');
+            currentId = await createConversationInternal(messages);
+        }
+
+        // Wenn es IMMER NOCH nicht geht, geben wir dem Nutzer Feedback
+        if (!currentId) {
+            setIsGeneratingLastenheft(false);
+            setMessages(prev => [...prev, {
+                type: 'bot',
+                content: 'Entschuldigung, ich konnte keine Verbindung zur Datenbank herstellen. Das ist nötig, um dein Lastenheft zu speichern. Bitte prüfe deine Internetverbindung oder lade die Seite neu.'
+            }]);
+            return;
+        }
 
         try {
             // Nachrichten für die Generierung vorbereiten
@@ -192,7 +230,7 @@ const ChatBot = () => {
 
             if (lastenheft) {
                 // In Supabase speichern
-                const lastenheftId = await saveLastenheft(conversationId, lastenheft);
+                const lastenheftId = await saveLastenheft(currentId, lastenheft);
 
                 if (lastenheftId) {
                     // Zur Lastenheft-Ansicht navigieren
@@ -220,10 +258,9 @@ const ChatBot = () => {
         }
     };
 
-    // Button-Logic wird nun direkt in handleSend gesteuert (Signal-basiert)
-
     // Quick Suggestions basierend auf Konversationsstand
     const getQuickSuggestions = (): string[] => {
+        // ... (Logik bleibt gleich)
         if (messages.length <= 1) {
             return [
                 '⏰ Zu viel Bürokram',
@@ -394,6 +431,7 @@ const ChatBot = () => {
                 <div className="max-w-2xl mx-auto">
                     <div className="relative flex items-center gap-3">
                         <input
+                            ref={inputRef}
                             type="text"
                             value={inputValue}
                             onChange={(e) => setInputValue(e.target.value)}

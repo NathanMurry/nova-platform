@@ -7,13 +7,17 @@ import {
     ExternalLink,
     Clock,
     CheckCircle,
-    Copy,
     Database,
     X,
-    Save
+    Save,
+    Star,
+    Sparkles,
+    ChevronDown,
+    ChevronUp
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
+import { generateEmbedding, extractSolutionCard } from '../../lib/gemini';
 import type { Specification } from '../../lib/database.types';
 
 interface Conversation {
@@ -21,31 +25,9 @@ interface Conversation {
     entrepreneur_id: string | null;
     messages: any[];
     status: string;
+    is_reference: boolean;
     created_at: string;
 }
-
-const AI_STUDIO_PROMPT = `Wir sind mit dem Entwurf fertig. Bitte erstelle mir jetzt eine "Solution Card" für unsere Wissensdatenbank.
-Fasse das gesamte Projekt, das wir gerade gebaut haben, so zusammen, dass eine andere KI später verstehen kann, welches Problem hier wie gelöst wurde.
-
-Bitte antworte ausschließlich mit einem JSON-Codeblock in folgendem Format:
-
-{
-  "problem_abstract": "Kurze, prägnante Beschreibung des ursprünglichen Problems (max. 2 Sätze)",
-  "solution_pattern": "Wie haben wir es gelöst? (z.B. 'WhatsApp-Bot mit Time-Trigger' oder 'React-Dashboard mit Drag-and-Drop')",
-  "industry_context": "Für welche Branche/Nische ist das relevant?",
-  "functionality_profile": [
-    "Feature 1",
-    "Feature 2"
-  ],
-  "tech_stack_details": {
-    "frontend": "Genutzte Frameworks/Libraries",
-    "backend": "Genutzte Services/APIs",
-    "integrations": "Externe Tools"
-  },
-  "use_case_tags": ["Tag1", "Tag2"]
-}
-
-Der Inhalt soll technisch präzise sein, damit er später für ein Vektor-Matching (RAG) genutzt werden kann.`;
 
 const Dashboard = () => {
     const navigate = useNavigate();
@@ -67,6 +49,8 @@ const Dashboard = () => {
     const [githubUrl, setGithubUrl] = useState('');
     const [deploymentUrl, setDeploymentUrl] = useState('');
     const [isSaving, setIsSaving] = useState(false);
+    const [expandedConvId, setExpandedConvId] = useState<string | null>(null);
+    const [loadError, setLoadError] = useState<string | null>(null);
 
     // Daten laden
     useEffect(() => {
@@ -108,12 +92,33 @@ const Dashboard = () => {
                 approvedSpecifications: approvedSpecs
             });
 
-        } catch (err) {
+        } catch (err: any) {
             console.error('Fehler beim Laden:', err);
+            setLoadError(err.message || 'Ein unbekannter Fehler ist beim Laden der Daten aufgetreten.');
         } finally {
             setIsLoading(false);
         }
     };
+
+    const toggleReference = async (id: string, currentStatus: boolean) => {
+        try {
+            const { error } = await supabase
+                .from('conversations')
+                .update({ is_reference: !currentStatus })
+                .eq('id', id);
+
+            if (error) throw error;
+
+            // Lokalen State aktualisieren
+            setConversations(prev => prev.map(c =>
+                c.id === id ? { ...c, is_reference: !currentStatus } : c
+            ));
+        } catch (err: any) {
+            alert('Fehler beim Markieren: ' + err.message);
+        }
+    };
+
+    const [isExtracting, setIsExtracting] = useState(false);
 
     const handleOpenKnowledgeModal = (spec: Specification) => {
         setSelectedSpec(spec);
@@ -121,6 +126,23 @@ const Dashboard = () => {
         setGithubUrl('');
         setDeploymentUrl('');
         setIsKnowledgeModalOpen(true);
+    };
+
+    const handleGenerateSolutionCard = async () => {
+        if (!selectedSpec) return;
+        setIsExtracting(true);
+        try {
+            const card = await extractSolutionCard(selectedSpec);
+            if (card) {
+                setJsonInput(JSON.stringify(card, null, 2));
+            } else {
+                alert('Extraktion fehlgeschlagen.');
+            }
+        } catch (err) {
+            console.error(err);
+        } finally {
+            setIsExtracting(false);
+        }
     };
 
     const handleSaveKnowledge = async () => {
@@ -138,20 +160,24 @@ const Dashboard = () => {
                 return;
             }
 
-            // 2. Speichern in Supabase
+            // 2. Embedding für das Problem-Abstract generieren
+            const embedding = await generateEmbedding(parsedData.problem_abstract);
+
+            // 3. Speichern in Supabase
             const { error } = await supabase
                 .from('knowledge_base')
                 .insert({
                     specification_id: selectedSpec.id,
-                    project_number: selectedSpec.project_number, // Falls vorhanden, sonst null
+                    project_number: selectedSpec.project_number,
                     problem_abstract: parsedData.problem_abstract,
                     solution_pattern: parsedData.solution_pattern,
                     industry_context: parsedData.industry_context,
                     functionality_profile: parsedData.functionality_profile,
-                    tech_stack: parsedData.tech_stack_details, // Mapping passt hier
+                    tech_stack: parsedData.tech_stack_details,
                     use_case_tags: parsedData.use_case_tags,
                     github_url: githubUrl,
-                    deployment_url: deploymentUrl
+                    deployment_url: deploymentUrl,
+                    embedding: embedding ? JSON.stringify(embedding) : null
                 });
 
             if (error) throw error;
@@ -167,10 +193,6 @@ const Dashboard = () => {
         }
     };
 
-    const copyPrompt = () => {
-        navigator.clipboard.writeText(AI_STUDIO_PROMPT);
-        alert('Prompt in die Zwischenablage kopiert!');
-    };
 
     const getStatusBadge = (status: string) => {
         switch (status) {
@@ -237,6 +259,17 @@ const Dashboard = () => {
 
                 {/* Main Content */}
                 <main className="ml-64 flex-1 p-8">
+                    {loadError && (
+                        <div className="mb-6 p-4 bg-red-50 border border-red-100 text-red-700 rounded-lg flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                                <X className="w-5 h-5" />
+                                <span>{loadError}</span>
+                            </div>
+                            <button onClick={() => setLoadError(null)} className="text-red-400 hover:text-red-600">
+                                <X className="w-4 h-4" />
+                            </button>
+                        </div>
+                    )}
                     <header className="flex justify-between items-center mb-8">
                         <div>
                             <h1 className="text-2xl font-bold text-gray-900">{activeTab === 'conversations' ? 'Gespräche' : 'Lastenhefte'}</h1>
@@ -270,18 +303,58 @@ const Dashboard = () => {
                             <div className="p-12 text-center text-gray-500">Laden...</div>
                         ) : activeTab === 'conversations' ? (
                             <div className="divide-y divide-gray-100">
-                                {conversations.map(conv => (
-                                    <div key={conv.id} className="px-6 py-4 hover:bg-gray-50">
-                                        <div className="flex justify-between">
-                                            <div>
-                                                <span className="font-medium">#{conv.id.slice(0, 8)}</span>
-                                                <span className="ml-2 text-sm text-gray-500">{formatDate(conv.created_at)}</span>
-                                                <p className="text-sm text-gray-600 mt-1">{getConversationPreview(conv.messages)}</p>
-                                            </div>
-                                            {getStatusBadge(conv.status)}
-                                        </div>
+                                {conversations.length === 0 ? (
+                                    <div className="p-12 text-center text-gray-500">
+                                        Keine Gespräche gefunden.
                                     </div>
-                                ))}
+                                ) : (
+                                    conversations.map(conv => (
+                                        <div key={conv.id} className="border-b border-gray-100 last:border-0 hover:bg-gray-50 transition-colors">
+                                            <div className="px-6 py-4 flex items-center justify-between cursor-pointer" onClick={() => setExpandedConvId(expandedConvId === conv.id ? null : conv.id)}>
+                                                <div className="flex items-center gap-4">
+                                                    <button
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            toggleReference(conv.id, !!conv.is_reference);
+                                                        }}
+                                                        className={`p-1.5 rounded-full transition-colors ${conv.is_reference ? 'text-amber-500 bg-amber-50' : 'text-gray-300 hover:text-amber-400'}`}
+                                                        title={conv.is_reference ? 'Als Referenz markiert' : 'Als Referenz markieren'}
+                                                    >
+                                                        <Star className={`w-5 h-5 ${conv.is_reference ? 'fill-current' : ''}`} />
+                                                    </button>
+                                                    <div>
+                                                        <div className="flex items-center gap-2">
+                                                            <span className="font-semibold text-gray-900">#{conv.id.slice(0, 8)}</span>
+                                                            <span className="text-xs text-gray-400 font-mono">{formatDate(conv.created_at)}</span>
+                                                            {getStatusBadge(conv.status)}
+                                                        </div>
+                                                        <p className="text-sm text-gray-500 mt-0.5 truncate max-w-md">
+                                                            {getConversationPreview(conv.messages)}
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                                <div className="flex items-center gap-3">
+                                                    {expandedConvId === conv.id ? <ChevronUp className="w-5 h-5 text-gray-400" /> : <ChevronDown className="w-5 h-5 text-gray-400" />}
+                                                </div>
+                                            </div>
+
+                                            {/* Expandable Content */}
+                                            {expandedConvId === conv.id && (
+                                                <div className="px-16 pb-6 bg-gray-50/50">
+                                                    <div className="bg-white rounded-lg border border-gray-100 p-4 space-y-4 shadow-inner max-h-96 overflow-y-auto">
+                                                        {conv.messages && conv.messages.map((msg: any, i: number) => (
+                                                            <div key={i} className={`flex ${msg.type === 'user' ? 'justify-end' : 'justify-start'}`}>
+                                                                <div className={`max-w-[80%] rounded-lg px-3 py-2 text-sm ${msg.type === 'user' ? 'bg-amber-100 text-amber-900' : 'bg-gray-100 text-gray-800'}`}>
+                                                                    <p className="whitespace-pre-line">{msg.content}</p>
+                                                                </div>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+                                    ))
+                                )}
                             </div>
                         ) : (
                             <div className="divide-y divide-gray-100">
@@ -334,23 +407,19 @@ const Dashboard = () => {
                             <div className="bg-amber-50 p-4 rounded-lg border border-amber-100">
                                 <h3 className="font-semibold text-amber-900 mb-2 flex items-center gap-2">
                                     <span className="bg-amber-200 text-amber-800 w-6 h-6 rounded-full flex items-center justify-center text-xs">1</span>
-                                    Analyse-Prompt kopieren
+                                    KI-Zusammenfassung (Solution Card)
                                 </h3>
-                                <p className="text-sm text-amber-800 mb-3">
-                                    Kopiere diesen Prompt und füge ihn am Ende deines AI Studio Chats ein, um die Projektdaten zu extrahieren.
+                                <p className="text-sm text-amber-800 mb-4">
+                                    Lasse Nova die wichtigsten Punkte aus dem Lastenheft extrahieren. Du kannst das Ergebnis danach bearbeiten.
                                 </p>
-                                <div className="relative">
-                                    <pre className="bg-white p-3 rounded text-xs text-gray-600 overflow-x-auto border border-amber-200 h-24">
-                                        {AI_STUDIO_PROMPT}
-                                    </pre>
-                                    <button
-                                        onClick={copyPrompt}
-                                        className="absolute top-2 right-2 bg-white shadow-sm border border-gray-200 p-1.5 rounded hover:bg-gray-50 text-gray-600"
-                                        title="Kopieren"
-                                    >
-                                        <Copy className="w-4 h-4" />
-                                    </button>
-                                </div>
+                                <button
+                                    onClick={handleGenerateSolutionCard}
+                                    disabled={isExtracting}
+                                    className="flex items-center gap-2 px-4 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600 transition-colors disabled:opacity-50"
+                                >
+                                    {isExtracting ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+                                    <span>Zusammenfassung generieren</span>
+                                </button>
                             </div>
 
                             {/* Step 2 */}
