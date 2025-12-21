@@ -40,15 +40,12 @@ const EXTRACTION_PROMPT = `Du bist ein Senior IT-Architect und Business Analyst.
 # LASTENHEFT-STRUKTUR (JSON):
 {
     "title": "Emoji + Präziser Projektname",
-    "status": "Ready for Dev",
-    "priority": "Basierend auf Business-Impact (Hoch/Mittel/Niedrig)",
-    
-    "zielsetzung": "Tiefgehende Analyse (min. 150-200 Wörter). Erkläre: 
+    "problemSummary": "Tiefgehende Analyse (min. 150-200 Wörter). Erkläre: 
         1. IST-Zustand (Das Schmerz-System), 
         2. SOLL-Zustand (Die präzise IT-Lösung), 
         3. Quantifizierbarer Nutzen (Zeit/Geld-Ersparnis basierend auf Nutzerangaben).",
     
-    "workflow": [
+    "requirements": [
         {
             "id": "WF-001",
             "category": "Modul/Phase Name",
@@ -145,12 +142,13 @@ export async function saveLastenheft(
                 entrepreneur_id: entrepreneurId || null,
                 conversation_id: conversationId,
                 title: lastenheft.title || 'Neues Lastenheft',
-                problem_summary: lastenheft.zielsetzung || lastenheft.problemSummary || '',
-                requirements: lastenheft.workflow || lastenheft.requirements || [],
+                problem_summary: lastenheft.problemSummary || lastenheft.zielsetzung || 'Keine Zusammenfassung vorhanden',
+                requirements: Array.isArray(lastenheft.requirements) ? lastenheft.requirements :
+                    Array.isArray(lastenheft.workflow) ? lastenheft.workflow : [],
                 industry: lastenheft.industry || 'nicht angegeben',
                 team_size: lastenheft.teamSize || 'nicht angegeben',
-                budget_range: lastenheft.geschaetzteKosten || lastenheft.budgetRange || 'nicht angegeben',
-                desired_outcome: JSON.stringify({
+                budget_range: lastenheft.budgetRange || lastenheft.geschaetzteKosten || 'auf Anfrage',
+                desired_outcome: typeof lastenheft.desiredOutcome === 'string' ? lastenheft.desiredOutcome : JSON.stringify({
                     techStack: lastenheft.techStackVorschlag,
                     datenFelder: lastenheft.datenFelder,
                     definitionOfDone: lastenheft.definitionOfDone,
