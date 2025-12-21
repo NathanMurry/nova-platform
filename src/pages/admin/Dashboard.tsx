@@ -124,7 +124,7 @@ const Dashboard = () => {
                 supabase.from('conversations').select('*', { count: 'exact', head: true }).eq('status', 'active'),
                 supabase.from('specifications').select('*', { count: 'exact', head: true }),
                 supabase.from('specifications').select('*', { count: 'exact', head: true }).eq('status', 'approved'),
-                supabase.from('specifications').select('*', { count: 'exact', head: true }).eq('is_design_paid', true).catch(() => ({ count: 0 }))
+                supabase.from('specifications').select('*', { count: 'exact', head: true }).eq('is_design_paid', true)
             ]);
 
             setStats({
@@ -132,8 +132,8 @@ const Dashboard = () => {
                 activeConversations: results[1].count || 0,
                 totalSpecifications: results[2].count || 0,
                 approvedSpecifications: results[3].count || 0,
-                paidDesigns: results[4]?.count || 0,
-                revenue: (results[4]?.count || 0) * 199
+                paidDesigns: results[4].count || 0,
+                revenue: (results[4].count || 0) * 199
             });
 
         } catch (err: any) {
