@@ -13,7 +13,15 @@ import {
     Star,
     Sparkles,
     ChevronDown,
-    ChevronUp
+    ChevronUp,
+    Trash2,
+    LayoutDashboard,
+    Target,
+    ShoppingCart,
+    Inbox,
+    Search,
+    User,
+    CreditCard
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
@@ -31,18 +39,22 @@ interface Conversation {
 
 const Dashboard = () => {
     const navigate = useNavigate();
-    const [activeTab, setActiveTab] = useState<'conversations' | 'specifications'>('conversations');
+    const [activeTab, setActiveTab] = useState<'overview' | 'leads' | 'specifications' | 'pipeline' | 'support'>('overview');
     const [conversations, setConversations] = useState<Conversation[]>([]);
     const [specifications, setSpecifications] = useState<Specification[]>([]);
+    const [supportMessages, setSupportMessages] = useState<any[]>([]);
     const [isLoading, setIsLoading] = useState(true);
+    const [searchQuery, setSearchQuery] = useState('');
     const [stats, setStats] = useState({
         totalConversations: 0,
         activeConversations: 0,
         totalSpecifications: 0,
-        approvedSpecifications: 0
+        approvedSpecifications: 0,
+        paidDesigns: 0,
+        revenue: 0
     });
 
-    // Modal State
+    // ... Modal State ...
     const [isKnowledgeModalOpen, setIsKnowledgeModalOpen] = useState(false);
     const [selectedSpec, setSelectedSpec] = useState<Specification | null>(null);
     const [jsonInput, setJsonInput] = useState('');
@@ -61,40 +73,55 @@ const Dashboard = () => {
         setIsLoading(true);
 
         try {
-            // Gespräche laden
-            const { data: convData, error: convError } = await supabase
+            // 1. Gespräche laden
+            const { data: convData } = await supabase
                 .from('conversations')
                 .select('*')
                 .order('created_at', { ascending: false })
-                .limit(20);
+                .limit(50);
+            setConversations(convData || []);
 
-            if (convError) console.error('Fehler Conversations:', convError);
-            else setConversations(convData || []);
-
-            // Lastenhefte laden
-            const { data: specData, error: specError } = await supabase
+            // 2. Lastenhefte laden
+            const { data: specData } = await supabase
                 .from('specifications')
                 .select('*')
-                .order('created_at', { ascending: false })
-                .limit(20);
+                .order('created_at', { ascending: false });
+            setSpecifications(specData || []);
 
-            if (specError) console.error('Fehler Specifications:', specError);
-            else setSpecifications(specData || []);
+            // 3. Support-Nachrichten laden
+            const { data: msgData } = await supabase
+                .from('messages')
+                .select('*, specifications(project_number, title)')
+                .order('created_at', { ascending: false });
+            setSupportMessages(msgData || []);
 
-            // Stats berechnen
-            const activeConvs = (convData || []).filter(c => c.status === 'active').length;
-            const approvedSpecs = (specData || []).filter(s => s.status === 'approved').length;
+            // 4. Echte Stats holen
+            const [
+                { count: totalConvs },
+                { count: activeConvs },
+                { count: totalSpecs },
+                { count: approvedSpecs },
+                { count: paidDesigns }
+            ] = await Promise.all([
+                supabase.from('conversations').select('*', { count: 'exact', head: true }),
+                supabase.from('conversations').select('*', { count: 'exact', head: true }).eq('status', 'active'),
+                supabase.from('specifications').select('*', { count: 'exact', head: true }),
+                supabase.from('specifications').select('*', { count: 'exact', head: true }).eq('status', 'approved'),
+                supabase.from('specifications').select('*', { count: 'exact', head: true }).eq('is_design_paid', true)
+            ]);
 
             setStats({
-                totalConversations: (convData || []).length,
-                activeConversations: activeConvs,
-                totalSpecifications: (specData || []).length,
-                approvedSpecifications: approvedSpecs
+                totalConversations: totalConvs || 0,
+                activeConversations: activeConvs || 0,
+                totalSpecifications: totalSpecs || 0,
+                approvedSpecifications: approvedSpecs || 0,
+                paidDesigns: paidDesigns || 0,
+                revenue: (paidDesigns || 0) * 199 // Einfache Dummy-Rechnung
             });
 
         } catch (err: any) {
             console.error('Fehler beim Laden:', err);
-            setLoadError(err.message || 'Ein unbekannter Fehler ist beim Laden der Daten aufgetreten.');
+            setLoadError(err.message);
         } finally {
             setIsLoading(false);
         }
@@ -119,6 +146,29 @@ const Dashboard = () => {
     };
 
     const [isExtracting, setIsExtracting] = useState(false);
+
+    const handleDeleteConversation = async (e: React.MouseEvent, id: string) => {
+        e.stopPropagation();
+        if (!window.confirm('Möchtest du dieses Gespräch wirklich unwiderruflich löschen?')) return;
+
+        try {
+            const { error } = await supabase
+                .from('conversations')
+                .delete()
+                .eq('id', id);
+
+            if (error) throw error;
+
+            // Lokalen State aktualisieren
+            setConversations(prev => prev.filter(c => c.id !== id));
+            setStats(prev => ({
+                ...prev,
+                totalConversations: prev.totalConversations - 1,
+            }));
+        } catch (err: any) {
+            alert('Fehler beim Löschen: ' + err.message);
+        }
+    };
 
     const handleOpenKnowledgeModal = (spec: Specification) => {
         setSelectedSpec(spec);
@@ -226,31 +276,52 @@ const Dashboard = () => {
         <div className="min-h-screen bg-gray-50 relative">
             <div className="flex">
                 {/* Sidebar */}
-                <aside className="w-64 bg-gray-900 min-h-screen p-6 text-white fixed h-full z-10">
+                <aside className="w-64 bg-slate-900 min-h-screen p-6 text-white fixed h-full z-10">
                     <div className="mb-10 flex items-center space-x-2 cursor-pointer hover:opacity-80 transition-opacity" onClick={() => navigate('/')}>
                         <ArrowLeft className="w-4 h-4 text-gray-400" />
                         <span className="font-bold text-xl tracking-tight">NOVA <span className="text-gray-500 text-sm font-normal">Admin</span></span>
                     </div>
 
-                    <nav className="space-y-2">
+                    <nav className="space-y-1">
                         <button
-                            onClick={() => setActiveTab('conversations')}
-                            className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors ${activeTab === 'conversations' ? 'bg-amber-500 text-white' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}
+                            onClick={() => setActiveTab('overview')}
+                            className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors ${activeTab === 'overview' ? 'bg-amber-500 text-white' : 'text-slate-400 hover:text-white hover:bg-slate-800'}`}
                         >
-                            <MessageSquare className="w-5 h-5" />
+                            <LayoutDashboard className="w-5 h-5" />
+                            <span>Dashboard</span>
+                        </button>
+                        <button
+                            onClick={() => setActiveTab('leads')}
+                            className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors ${activeTab === 'leads' ? 'bg-amber-500 text-white' : 'text-slate-400 hover:text-white hover:bg-slate-800'}`}
+                        >
+                            <User className="w-5 h-5" />
                             <span>Gespräche</span>
                         </button>
                         <button
                             onClick={() => setActiveTab('specifications')}
-                            className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors ${activeTab === 'specifications' ? 'bg-amber-500 text-white' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}
+                            className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors ${activeTab === 'specifications' ? 'bg-amber-500 text-white' : 'text-slate-400 hover:text-white hover:bg-slate-800'}`}
                         >
                             <FileText className="w-5 h-5" />
                             <span>Lastenhefte</span>
                         </button>
+                        <button
+                            onClick={() => setActiveTab('pipeline')}
+                            className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors ${activeTab === 'pipeline' ? 'bg-amber-500 text-white' : 'text-slate-400 hover:text-white hover:bg-slate-800'}`}
+                        >
+                            <Target className="w-5 h-5" />
+                            <span>Pipeline</span>
+                        </button>
+                        <button
+                            onClick={() => setActiveTab('support')}
+                            className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors ${activeTab === 'support' ? 'bg-amber-500 text-white' : 'text-slate-400 hover:text-white hover:bg-slate-800'}`}
+                        >
+                            <Inbox className="w-5 h-5" />
+                            <span>Support</span>
+                        </button>
                     </nav>
 
                     <div className="absolute bottom-6 left-6 right-6">
-                        <button onClick={loadData} disabled={isLoading} className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-gray-800 text-gray-300 rounded-lg hover:bg-gray-700 transition-colors disabled:opacity-50">
+                        <button onClick={loadData} disabled={isLoading} className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-slate-800 text-slate-300 rounded-lg hover:bg-slate-700 transition-colors disabled:opacity-50">
                             <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
                             <span>Aktualisieren</span>
                         </button>
@@ -272,54 +343,69 @@ const Dashboard = () => {
                     )}
                     <header className="flex justify-between items-center mb-8">
                         <div>
-                            <h1 className="text-2xl font-bold text-gray-900">{activeTab === 'conversations' ? 'Gespräche' : 'Lastenhefte'}</h1>
-                            <p className="text-gray-500 mt-1">{activeTab === 'conversations' ? 'Alle Chat-Konversationen' : 'Generierte Anforderungsdokumente'}</p>
+                            <h1 className="text-2xl font-bold text-gray-900 capitalize">{activeTab}</h1>
+                            <p className="text-gray-500 mt-1">Status der Nova Plattform im Blick behalten</p>
+                        </div>
+                        <div className="relative w-96">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                            <input
+                                type="text"
+                                placeholder="P-XXXX, E-Mail oder Name suchen..."
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                                className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-full focus:ring-2 focus:ring-amber-200 outline-none"
+                            />
                         </div>
                     </header>
 
-                    {/* Stats Grid */}
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-                        {/* ... Stats rendering kept simple to save space, logic same as before ... */}
-                        <div className="bg-white p-5 rounded-xl shadow-sm border border-gray-100">
-                            <p className="text-xs text-gray-500 uppercase">Gespräche</p>
-                            <p className="text-2xl font-bold">{stats.totalConversations}</p>
+                    {activeTab === 'overview' && (
+                        <div className="space-y-8">
+                            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                                <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                                    <div className="flex items-center gap-3 text-slate-500 mb-2">
+                                        <ShoppingCart className="w-4 h-4" />
+                                        <p className="text-xs uppercase font-semibold">Designs Verkauft</p>
+                                    </div>
+                                    <p className="text-3xl font-bold text-slate-900">{stats.paidDesigns}</p>
+                                </div>
+                                <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                                    <div className="flex items-center gap-3 text-green-600 mb-2">
+                                        <CreditCard className="w-4 h-4" />
+                                        <p className="text-xs uppercase font-semibold">Umsatz (Dummy)</p>
+                                    </div>
+                                    <p className="text-3xl font-bold text-slate-900">{stats.revenue} €</p>
+                                </div>
+                                <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                                    <div className="flex items-center gap-3 text-amber-500 mb-2">
+                                        <User className="w-4 h-4" />
+                                        <p className="text-xs uppercase font-semibold">Leads Gesamt</p>
+                                    </div>
+                                    <p className="text-3xl font-bold text-slate-900">{stats.totalConversations}</p>
+                                </div>
+                                <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                                    <div className="flex items-center gap-3 text-blue-500 mb-2">
+                                        <CheckCircle className="w-4 h-4" />
+                                        <p className="text-xs uppercase font-semibold">Freigegeben</p>
+                                    </div>
+                                    <p className="text-3xl font-bold text-slate-900">{stats.approvedSpecifications}</p>
+                                </div>
+                            </div>
                         </div>
-                        <div className="bg-white p-5 rounded-xl shadow-sm border border-gray-100">
-                            <p className="text-xs text-gray-500 uppercase">Aktiv</p>
-                            <p className="text-2xl font-bold">{stats.activeConversations}</p>
-                        </div>
-                        <div className="bg-white p-5 rounded-xl shadow-sm border border-gray-100">
-                            <p className="text-xs text-gray-500 uppercase">Lastenhefte</p>
-                            <p className="text-2xl font-bold">{stats.totalSpecifications}</p>
-                        </div>
-                        <div className="bg-white p-5 rounded-xl shadow-sm border border-gray-100">
-                            <p className="text-xs text-gray-500 uppercase">Freigegeben</p>
-                            <p className="text-2xl font-bold">{stats.approvedSpecifications}</p>
-                        </div>
-                    </div>
+                    )}
 
                     <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
                         {isLoading ? (
                             <div className="p-12 text-center text-gray-500">Laden...</div>
-                        ) : activeTab === 'conversations' ? (
+                        ) : activeTab === 'leads' ? (
                             <div className="divide-y divide-gray-100">
-                                {conversations.length === 0 ? (
-                                    <div className="p-12 text-center text-gray-500">
-                                        Keine Gespräche gefunden.
-                                    </div>
+                                {conversations.filter(c => c.id.includes(searchQuery)).length === 0 ? (
+                                    <div className="p-12 text-center text-gray-500">Keine passenden Leads gefunden.</div>
                                 ) : (
-                                    conversations.map(conv => (
+                                    conversations.filter(c => c.id.includes(searchQuery)).map(conv => (
                                         <div key={conv.id} className="border-b border-gray-100 last:border-0 hover:bg-gray-50 transition-colors">
                                             <div className="px-6 py-4 flex items-center justify-between cursor-pointer" onClick={() => setExpandedConvId(expandedConvId === conv.id ? null : conv.id)}>
                                                 <div className="flex items-center gap-4">
-                                                    <button
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            toggleReference(conv.id, !!conv.is_reference);
-                                                        }}
-                                                        className={`p-1.5 rounded-full transition-colors ${conv.is_reference ? 'text-amber-500 bg-amber-50' : 'text-gray-300 hover:text-amber-400'}`}
-                                                        title={conv.is_reference ? 'Als Referenz markiert' : 'Als Referenz markieren'}
-                                                    >
+                                                    <button onClick={(e) => { e.stopPropagation(); toggleReference(conv.id, !!conv.is_reference); }} className={`p-1.5 rounded-full transition-colors ${conv.is_reference ? 'text-amber-500 bg-amber-50' : 'text-gray-300 hover:text-amber-400'}`}>
                                                         <Star className={`w-5 h-5 ${conv.is_reference ? 'fill-current' : ''}`} />
                                                     </button>
                                                     <div>
@@ -328,17 +414,16 @@ const Dashboard = () => {
                                                             <span className="text-xs text-gray-400 font-mono">{formatDate(conv.created_at)}</span>
                                                             {getStatusBadge(conv.status)}
                                                         </div>
-                                                        <p className="text-sm text-gray-500 mt-0.5 truncate max-w-md">
-                                                            {getConversationPreview(conv.messages)}
-                                                        </p>
+                                                        <p className="text-sm text-gray-500 mt-0.5 truncate max-w-md">{getConversationPreview(conv.messages)}</p>
                                                     </div>
                                                 </div>
                                                 <div className="flex items-center gap-3">
+                                                    <button onClick={(e) => handleDeleteConversation(e, conv.id)} className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-full transition-colors">
+                                                        <Trash2 className="w-4 h-4" />
+                                                    </button>
                                                     {expandedConvId === conv.id ? <ChevronUp className="w-5 h-5 text-gray-400" /> : <ChevronDown className="w-5 h-5 text-gray-400" />}
                                                 </div>
                                             </div>
-
-                                            {/* Expandable Content */}
                                             {expandedConvId === conv.id && (
                                                 <div className="px-16 pb-6 bg-gray-50/50">
                                                     <div className="bg-white rounded-lg border border-gray-100 p-4 space-y-4 shadow-inner max-h-96 overflow-y-auto">
@@ -356,12 +441,12 @@ const Dashboard = () => {
                                     ))
                                 )}
                             </div>
-                        ) : (
+                        ) : activeTab === 'specifications' ? (
                             <div className="divide-y divide-gray-100">
-                                {specifications.map(spec => (
+                                {specifications.filter(s => s.project_number?.includes(searchQuery) || s.title?.includes(searchQuery)).map(spec => (
                                     <div key={spec.id} className="px-6 py-4 hover:bg-gray-50 transition-colors">
                                         <div className="flex items-start justify-between">
-                                            <div className="flex-1 cursor-pointer" onClick={() => navigate(`/lastenheft/${spec.id}`)}>
+                                            <div className="flex-1 cursor-pointer" onClick={() => navigate(`/lastenheft/${spec.id}`, { state: { fromAdmin: true } })}>
                                                 <div className="flex items-center gap-3 mb-1">
                                                     <span className="font-medium text-gray-900">{spec.title || 'Ohne Titel'}</span>
                                                     {spec.project_number && <span className="bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded text-xs font-mono">{spec.project_number}</span>}
@@ -370,11 +455,7 @@ const Dashboard = () => {
                                                 <p className="text-sm text-gray-500">{spec.problem_summary?.slice(0, 100)}...</p>
                                             </div>
                                             <div className="flex items-center gap-2">
-                                                <button
-                                                    onClick={(e) => { e.stopPropagation(); handleOpenKnowledgeModal(spec); }}
-                                                    className="p-2 text-gray-400 hover:text-amber-500 hover:bg-amber-50 rounded-full transition-colors"
-                                                    title="In Wissensdatenbank aufnehmen"
-                                                >
+                                                <button onClick={(e) => { e.stopPropagation(); handleOpenKnowledgeModal(spec); }} className="p-2 text-gray-400 hover:text-amber-500 hover:bg-amber-50 rounded-full transition-colors" title="In Wissensdatenbank aufnehmen">
                                                     <Database className="w-5 h-5" />
                                                 </button>
                                                 <ExternalLink className="w-4 h-4 text-gray-400" />
@@ -383,7 +464,58 @@ const Dashboard = () => {
                                     </div>
                                 ))}
                             </div>
-                        )}
+                        ) : activeTab === 'pipeline' ? (
+                            <div className="divide-y divide-gray-100">
+                                <div className="bg-slate-50 px-6 py-2 text-xs font-bold text-slate-400 uppercase tracking-wider">Design Phase (Bezahlt)</div>
+                                {specifications.filter(s => s.is_design_paid && !s.released_to_dev).map(spec => (
+                                    <div key={spec.id} className="px-6 py-4 flex items-center justify-between border-l-4 border-amber-500">
+                                        <div>
+                                            <p className="font-bold text-slate-900">{spec.project_number}</p>
+                                            <p className="text-sm text-slate-500">{spec.title}</p>
+                                        </div>
+                                        <div className="flex items-center gap-4">
+                                            <input
+                                                type="text"
+                                                placeholder="Figma/Design URL..."
+                                                className="px-3 py-1 text-sm border border-slate-200 rounded-lg w-64"
+                                                defaultValue={spec.design_url || ''}
+                                                onBlur={async (e) => {
+                                                    await supabase.from('specifications').update({ design_url: e.target.value }).eq('id', spec.id);
+                                                    loadData();
+                                                }}
+                                            />
+                                            <span className="px-3 py-1 bg-amber-100 text-amber-700 text-xs font-bold rounded-full">In Arbeit</span>
+                                        </div>
+                                    </div>
+                                ))}
+                                <div className="bg-slate-50 px-6 py-2 text-xs font-bold text-slate-400 uppercase tracking-wider mt-4">Marktplatz (Börse)</div>
+                                {specifications.filter(s => s.released_to_dev).map(spec => (
+                                    <div key={spec.id} className="px-6 py-4 flex items-center justify-between border-l-4 border-green-500">
+                                        <div>
+                                            <p className="font-bold text-slate-900">{spec.project_number}</p>
+                                            <p className="text-sm text-slate-500">{spec.title}</p>
+                                        </div>
+                                        <span className="px-3 py-1 bg-green-100 text-green-700 text-xs font-bold rounded-full">Live an Börse</span>
+                                    </div>
+                                ))}
+                            </div>
+                        ) : activeTab === 'support' ? (
+                            <div className="divide-y divide-gray-100">
+                                {supportMessages.length === 0 ? (
+                                    <div className="p-12 text-center text-gray-500">Keine Support-Anfragen.</div>
+                                ) : (
+                                    supportMessages.map(msg => (
+                                        <div key={msg.id} className="px-6 py-4 hover:bg-slate-50 transition-colors">
+                                            <div className="flex justify-between mb-1">
+                                                <span className="font-bold text-slate-900">{msg.specifications?.project_number}</span>
+                                                <span className="text-xs text-slate-400">{formatDate(msg.created_at)}</span>
+                                            </div>
+                                            <p className="text-sm text-slate-600 line-clamp-2">{msg.content}</p>
+                                        </div>
+                                    ))
+                                )}
+                            </div>
+                        ) : null}
                     </div>
                 </main>
             </div>

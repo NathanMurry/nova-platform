@@ -41,6 +41,7 @@ CREATE TABLE IF NOT EXISTS conversations (
     entrepreneur_id UUID REFERENCES entrepreneurs(id) ON DELETE CASCADE,
     messages JSONB DEFAULT '[]'::jsonb, -- Array von {type, content, timestamp, suggestions}
     status TEXT DEFAULT 'active' CHECK (status IN ('active', 'completed', 'abandoned')),
+    is_reference BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     completed_at TIMESTAMPTZ
 );
@@ -145,6 +146,40 @@ CREATE INDEX IF NOT EXISTS idx_knowledge_embedding ON knowledge_base USING ivffl
     WITH (lists = 100);
 
 -- =====================================================
+-- RPC FUNKTIONEN
+-- =====================================================
+
+-- Vektor-Suche für Wissensdatenbank
+CREATE OR REPLACE FUNCTION match_knowledge (
+  query_embedding vector(768),
+  match_threshold float,
+  match_count int
+)
+RETURNS TABLE (
+  id UUID,
+  problem_abstract TEXT,
+  solution_pattern TEXT,
+  industry_context TEXT,
+  similarity float
+)
+LANGUAGE plpgsql
+AS $$
+BEGIN
+  RETURN QUERY
+  SELECT
+    kb.id,
+    kb.problem_abstract,
+    kb.solution_pattern,
+    kb.industry_context,
+    1 - (kb.embedding <=> query_embedding) AS similarity
+  FROM knowledge_base kb
+  WHERE 1 - (kb.embedding <=> query_embedding) > match_threshold
+  ORDER BY kb.embedding <=> query_embedding
+  LIMIT match_count;
+END;
+$$;
+
+-- =====================================================
 -- AUTOMATISCHE UPDATED_AT TRIGGER
 -- =====================================================
 CREATE OR REPLACE FUNCTION update_updated_at_column()
@@ -211,46 +246,45 @@ ALTER TABLE drafts ENABLE ROW LEVEL SECURITY;
 ALTER TABLE orders ENABLE ROW LEVEL SECURITY;
 ALTER TABLE knowledge_base ENABLE ROW LEVEL SECURITY;
 
--- Einfache Policy: Angemeldete Benutzer können ihre eigenen Daten sehen
--- Policies müssen ggf. gelöscht werden bevor sie neu erstellt werden können (Idempotenz)
--- Hier vereinfacht, Supabase ignoriert meist existente Policies ohne Fehler oder man nutzt DROP POLICY IF EXISTS
+-- 1. UNTERNEHMER: Eigene Daten sehen
 DROP POLICY IF EXISTS "Users can view own data" ON entrepreneurs;
 CREATE POLICY "Users can view own data" ON entrepreneurs
     FOR ALL USING (auth.uid()::text = id::text);
 
-DROP POLICY IF EXISTS "Users can view own conversations" ON conversations;
-CREATE POLICY "Users can view own conversations" ON conversations
-    FOR ALL USING (entrepreneur_id IN (
-        SELECT id FROM entrepreneurs WHERE auth.uid()::text = id::text
-    ));
+-- 2. GESPRÄCHE: Öffentliches Erstellen (für Chatbot) & Admin-Sichtbarkeit
+DROP POLICY IF EXISTS "Allow public insert" ON conversations;
+CREATE POLICY "Allow public insert" ON conversations
+    FOR INSERT WITH CHECK (true);
 
-DROP POLICY IF EXISTS "Users can view own specifications" ON specifications;
-CREATE POLICY "Users can view own specifications" ON specifications
-    FOR ALL USING (entrepreneur_id IN (
-        SELECT id FROM entrepreneurs WHERE auth.uid()::text = id::text
-    ));
+DROP POLICY IF EXISTS "Allow selection for all" ON conversations;
+CREATE POLICY "Allow selection for all" ON conversations
+    FOR SELECT USING (true);
 
-DROP POLICY IF EXISTS "Users can view related drafts" ON drafts;
-CREATE POLICY "Users can view related drafts" ON drafts
-    FOR ALL USING (specification_id IN (
-        SELECT id FROM specifications WHERE entrepreneur_id IN (
-            SELECT id FROM entrepreneurs WHERE auth.uid()::text = id::text
-        )
-    ));
+DROP POLICY IF EXISTS "Allow updates for all" ON conversations;
+CREATE POLICY "Allow updates for all" ON conversations
+    FOR UPDATE USING (true);
 
-DROP POLICY IF EXISTS "Users can view related orders" ON orders;
-CREATE POLICY "Users can view related orders" ON orders
-    FOR ALL USING (draft_id IN (
-        SELECT d.id FROM drafts d
-        JOIN specifications s ON d.specification_id = s.id
-        WHERE s.entrepreneur_id IN (
-            SELECT id FROM entrepreneurs WHERE auth.uid()::text = id::text
-        )
-    ));
-    
-DROP POLICY IF EXISTS "Admins can view all knowledge" ON knowledge_base;
-CREATE POLICY "Admins can view all knowledge" ON knowledge_base
-    FOR ALL USING (true);
+-- 3. LASTENHEFTE: Öffentliches Erstellen & Admin-Sichtbarkeit
+DROP POLICY IF EXISTS "Allow public insert" ON specifications;
+CREATE POLICY "Allow public insert" ON specifications
+    FOR INSERT WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Allow selection for all" ON specifications;
+CREATE POLICY "Allow selection for all" ON specifications
+    FOR SELECT USING (true);
+
+DROP POLICY IF EXISTS "Allow updates for all" ON specifications;
+CREATE POLICY "Allow updates for all" ON specifications
+    FOR UPDATE USING (true);
+
+-- 4. WISSENSDATENBANK: Öffentliche Sichtbarkeit für RAG, Admin-Schreibzugriff
+DROP POLICY IF EXISTS "Anyone can view knowledge" ON knowledge_base;
+CREATE POLICY "Anyone can view knowledge" ON knowledge_base
+    FOR SELECT USING (true);
+
+DROP POLICY IF EXISTS "Anyone can insert matching results" ON knowledge_base;
+CREATE POLICY "Anyone can insert matching results" ON knowledge_base
+    FOR INSERT WITH CHECK (true);
 
 -- =====================================================
 -- STORAGE BUCKETS

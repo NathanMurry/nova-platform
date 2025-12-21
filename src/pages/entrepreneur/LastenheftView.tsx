@@ -15,7 +15,8 @@ import {
     Loader2,
     Lock,
     Eye,
-    Zap
+    Zap,
+    ExternalLink
 } from 'lucide-react';
 import { loadLastenheft, addComment, updateLastenheft } from '../../lib/lastenheft';
 import { supabase } from '../../lib/supabase';
@@ -47,6 +48,10 @@ interface LastenheftData {
     comments: Comment[];
     created_at: string;
     entrepreneur_id?: string | null;
+    project_number?: string;
+    design_url?: string;
+    is_design_paid?: boolean;
+    released_to_dev?: boolean;
 }
 
 const LastenheftView = () => {
@@ -179,8 +184,43 @@ const LastenheftView = () => {
         }
     };
 
-    const handleOrderDraft = () => {
-        setShowOfferModal(true);
+    const handleOrderDraft = async () => {
+        if (!id) return;
+        try {
+            // Dummy: Einfach als bezahlt markieren
+            const { data, error } = await supabase
+                .from('specifications')
+                .update({ is_design_paid: true })
+                .eq('id', id)
+                .select()
+                .single();
+
+            if (error) throw error;
+            setLastenheft(data as LastenheftData);
+            setShowOfferModal(true);
+        } catch (err) {
+            alert('Fehler bei der Bestellung');
+        }
+    };
+
+    const handleReleaseToMarketplace = async () => {
+        if (!id) return;
+        if (!window.confirm('Möchtest du dieses Projekt wirklich für die Entwickler-Börse freigeben?')) return;
+
+        try {
+            const { data, error } = await supabase
+                .from('specifications')
+                .update({ released_to_dev: true })
+                .eq('id', id)
+                .select()
+                .single();
+
+            if (error) throw error;
+            setLastenheft(data as LastenheftData);
+            alert('Projekt erfolgreich für Entwickler freigegeben!');
+        } catch (err) {
+            alert('Fehler bei der Freigabe');
+        }
     };
 
     const getPriorityColor = (priority: string) => {
@@ -309,7 +349,14 @@ const LastenheftView = () => {
                 <div className="max-w-4xl mx-auto flex items-center justify-between">
                     <div className="flex items-center gap-4">
                         <button
-                            onClick={() => navigate('/')}
+                            onClick={() => {
+                                const state = window.history.state?.usr;
+                                if (state?.fromAdmin) {
+                                    navigate('/admin');
+                                } else {
+                                    navigate('/');
+                                }
+                            }}
                             className="p-2 hover:bg-amber-50 rounded-full transition-colors text-gray-500"
                         >
                             <ArrowLeft className="w-5 h-5" />
@@ -382,27 +429,70 @@ const LastenheftView = () => {
                     </div>
                 </section>
 
-                {/* DESIGN DRAFT OFFER - PROMINENT - HIDDEN IN PRINT */}
-                <section className="bg-gradient-to-r from-slate-900 to-slate-800 rounded-2xl shadow-xl overflow-hidden mb-8 border border-slate-700 print:hidden">
-                    <div className="p-8 flex flex-col md:flex-row items-center justify-between gap-6">
-                        <div className="text-left">
-                            <h3 className="text-2xl font-bold text-white mb-2">Visueller Entwurf gefällig?</h3>
-                            <p className="text-slate-300 max-w-lg">
-                                Wir erstellen Ihnen einen professionellen Design-Entwurf (Mockup) Ihrer App in nur 24 Stunden.
-                                Sehen Sie genau, wie die Lösung aussehen wird.
-                            </p>
+                {/* DESIGN DRAFT OFFER / RESULT - PROMINENT - HIDDEN IN PRINT */}
+                <section className="bg-gradient-to-r from-slate-900 to-slate-800 rounded-2xl shadow-xl overflow-hidden mb-8 border border-slate-700 print:hidden transition-all">
+                    {lastenheft.design_url ? (
+                        <div className="p-8 flex flex-col md:flex-row items-center justify-between gap-6">
+                            <div className="text-left">
+                                <div className="inline-flex items-center gap-2 px-3 py-1 bg-green-500/20 text-green-400 rounded-full text-xs font-bold mb-3 border border-green-500/30">
+                                    <CheckCircle className="w-3 h-3" /> Design bereit
+                                </div>
+                                <h3 className="text-2xl font-bold text-white mb-2">Dein Design-Entwurf ist fertig!</h3>
+                                <p className="text-slate-300 max-w-lg">
+                                    Unser Team hat den visuellen Entwurf für dein Projekt erstellt. Klicke auf den Button, um die Vorschau zu öffnen.
+                                </p>
+                            </div>
+                            <div className="flex flex-col items-center gap-3">
+                                <a
+                                    href={lastenheft.design_url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="px-8 py-3 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-full font-bold hover:from-amber-600 hover:to-orange-600 transition-all shadow-lg flex items-center gap-2"
+                                >
+                                    <ExternalLink className="w-5 h-5" />
+                                    Entwurf ansehen
+                                </a>
+                                {!lastenheft.released_to_dev && (
+                                    <button
+                                        onClick={handleReleaseToMarketplace}
+                                        className="text-white/70 hover:text-white text-sm underline underline-offset-4 decoration-amber-500/50"
+                                    >
+                                        Projekt für Börse freigeben
+                                    </button>
+                                )}
+                            </div>
                         </div>
-                        <div className="flex flex-col items-center">
-                            <span className="text-3xl font-bold text-amber-400 mb-2">199 €</span>
-                            <button
-                                onClick={handleOrderDraft}
-                                className="px-8 py-3 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-full font-bold hover:from-amber-600 hover:to-orange-600 transition-all shadow-lg hover:shadow-amber-500/25 transform hover:-translate-y-1 whitespace-nowrap"
-                            >
-                                Jetzt Entwurf anfordern
-                            </button>
-                            <span className="text-xs text-slate-500 mt-2">Innerhalb von 24h • Professionelles Mockup</span>
+                    ) : lastenheft.is_design_paid ? (
+                        <div className="p-8 flex flex-col md:flex-row items-center justify-between gap-6">
+                            <div className="text-left">
+                                <h3 className="text-2xl font-bold text-white mb-2">Design in Arbeit...</h3>
+                                <p className="text-slate-300 max-w-lg">
+                                    Vielen Dank! Wir erstellen gerade deinen professionellen Design-Entwurf. Dieser wird innerhalb von 24 Stunden hier erscheinen.
+                                </p>
+                            </div>
+                            <div className="w-12 h-12 border-4 border-amber-500 border-t-transparent rounded-full animate-spin" />
                         </div>
-                    </div>
+                    ) : (
+                        <div className="p-8 flex flex-col md:flex-row items-center justify-between gap-6">
+                            <div className="text-left">
+                                <h3 className="text-2xl font-bold text-white mb-2">Visueller Entwurf gefällig?</h3>
+                                <p className="text-slate-300 max-w-lg">
+                                    Wir erstellen Ihnen einen professionellen Design-Entwurf (Mockup) Ihrer App in nur 24 Stunden.
+                                    Sehen Sie genau, wie die Lösung aussehen wird.
+                                </p>
+                            </div>
+                            <div className="flex flex-col items-center">
+                                <span className="text-3xl font-bold text-amber-400 mb-2">199 €</span>
+                                <button
+                                    onClick={handleOrderDraft}
+                                    className="px-8 py-3 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-full font-bold hover:from-amber-600 hover:to-orange-600 transition-all shadow-lg hover:shadow-amber-500/25 transform hover:-translate-y-1 whitespace-nowrap"
+                                >
+                                    Jetzt Entwurf anfordern
+                                </button>
+                                <span className="text-xs text-slate-500 mt-2">Innerhalb von 24h • Professionelles Mockup</span>
+                            </div>
+                        </div>
+                    )}
                 </section>
 
                 {/* Tech Stack & Details */}
