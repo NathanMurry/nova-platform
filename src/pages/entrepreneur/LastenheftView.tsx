@@ -18,7 +18,7 @@ import {
     Zap,
     ExternalLink
 } from 'lucide-react';
-import { loadLastenheft, addComment, updateLastenheft } from '../../lib/lastenheft';
+import { loadLastenheft, addComment } from '../../lib/lastenheft';
 import { supabase } from '../../lib/supabase';
 
 interface Requirement {
@@ -67,7 +67,6 @@ const LastenheftView = () => {
     const [error, setError] = useState<string | null>(null);
     const [newComment, setNewComment] = useState('');
     const [isSendingComment, setIsSendingComment] = useState(false);
-    const [isApproving, setIsApproving] = useState(false);
 
     // Gate & Contact State
     const [isGateOpen, setIsGateOpen] = useState(false);
@@ -170,19 +169,6 @@ const LastenheftView = () => {
         }
     };
 
-    const handleApprove = async () => {
-        if (!id) return;
-
-        setIsApproving(true);
-        try {
-            const updated = await updateLastenheft(id, { status: 'approved' });
-            if (updated) {
-                setLastenheft(updated as LastenheftData);
-            }
-        } finally {
-            setIsApproving(false);
-        }
-    };
 
     const handleOrderDraft = async () => {
         if (!id) return;
@@ -289,13 +275,13 @@ const LastenheftView = () => {
     if (!isGateOpen) {
         return (
             <div className="min-h-screen bg-gradient-to-b from-amber-50 to-white flex flex-col items-center justify-center p-4">
-                <div className="max-w-md w-full bg-white rounded-2xl shadow-xl border border-amber-100 p-8 text-center">
-                    <div className="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-6">
-                        <Lock className="w-8 h-8 text-amber-600" />
+                <div className="max-w-md w-full bg-white rounded-3xl shadow-xl border border-amber-100 p-10 text-center">
+                    <div className="w-20 h-20 bg-amber-100 rounded-2xl flex items-center justify-center mx-auto mb-8 shadow-inner">
+                        <Lock className="w-10 h-10 text-amber-600" />
                     </div>
-                    <h1 className="text-3xl font-bold text-gray-900 mb-2">Lastenheft freischalten</h1>
-                    <p className="text-gray-600 mb-8">
-                        Ihr Lastenheft wurde erfolgreich generiert! Bitte geben Sie Ihre Kontaktdaten ein, um es anzusehen und zu bearbeiten.
+                    <h1 className="text-3xl font-bold text-gray-900 mb-3">Projekt-Portal bereit</h1>
+                    <p className="text-gray-600 mb-8 leading-relaxed">
+                        Dein Lastenheft wurde generiert! Gib kurz deine Daten ein, um es sofort zu aktivieren und deinen Entwurf anzufragen.
                     </p>
 
                     <form onSubmit={handleContactSubmit} className="space-y-4 text-left">
@@ -629,20 +615,6 @@ const LastenheftView = () => {
 
                 {/* Aktions-Buttons */}
                 <section className="flex flex-col sm:flex-row gap-4 print:hidden">
-                    {lastenheft.status !== 'approved' && (
-                        <button
-                            onClick={handleApprove}
-                            disabled={isApproving}
-                            className="flex-1 flex items-center justify-center gap-2 px-6 py-4 bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-xl font-semibold hover:from-green-600 hover:to-emerald-600 transition-all shadow-lg disabled:opacity-50"
-                        >
-                            {isApproving ? (
-                                <Loader2 className="w-5 h-5 animate-spin" />
-                            ) : (
-                                <CheckCircle className="w-5 h-5" />
-                            )}
-                            Lastenheft freigeben
-                        </button>
-                    )}
                     <button
                         onClick={handlePrint}
                         className="flex-1 flex items-center justify-center gap-2 px-6 py-4 bg-white border-2 border-gray-200 text-gray-700 rounded-xl font-semibold hover:bg-gray-50 transition-all print:hidden"

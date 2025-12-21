@@ -156,7 +156,7 @@ export async function saveLastenheft(
                     definitionOfDone: lastenheft.definitionOfDone,
                     aufwand: lastenheft.geschaetzterAufwand
                 }),
-                status: 'draft'
+                status: 'approved'
             })
             .select()
             .single();

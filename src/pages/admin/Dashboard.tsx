@@ -474,27 +474,38 @@ const Dashboard = () => {
                         ) : activeTab === 'pipeline' ? (
                             <div className="divide-y divide-gray-100">
                                 <div className="bg-slate-50 px-6 py-2 text-xs font-bold text-slate-400 uppercase tracking-wider">Design Phase (Bezahlt)</div>
-                                {specifications.filter(s => s.is_design_paid && !s.released_to_dev).map(spec => (
-                                    <div key={spec.id} className="px-6 py-4 flex items-center justify-between border-l-4 border-amber-500">
-                                        <div>
-                                            <p className="font-bold text-slate-900">{spec.project_number}</p>
-                                            <p className="text-sm text-slate-500">{spec.title}</p>
+                                {specifications.filter(s => s.is_design_paid && !s.released_to_dev)
+                                    .sort((a, b) => (a.design_url === b.design_url) ? 0 : a.design_url ? 1 : -1)
+                                    .map(spec => (
+                                        <div key={spec.id} className={`px-6 py-4 flex items-center justify-between border-l-4 ${!spec.design_url ? 'border-red-500 bg-red-50/30' : 'border-amber-500'}`}>
+                                            <div className="flex-1">
+                                                <div className="flex items-center gap-2 mb-1">
+                                                    <p className="font-bold text-slate-900">{spec.project_number}</p>
+                                                    {!spec.design_url && <span className="px-2 py-0.5 bg-red-600 text-white text-[10px] uppercase font-black rounded-sm animate-pulse">Handlungsbedarf (24h)</span>}
+                                                </div>
+                                                <p className="text-sm text-slate-500">{spec.title}</p>
+                                            </div>
+                                            <div className="flex items-center gap-4">
+                                                <div className="relative">
+                                                    <input
+                                                        type="text"
+                                                        placeholder="Figma/Design URL..."
+                                                        className="px-3 py-2 text-sm border border-slate-200 rounded-lg w-72 focus:ring-2 focus:ring-amber-200 outline-none"
+                                                        defaultValue={spec.design_url || ''}
+                                                        onBlur={async (e) => {
+                                                            if (e.target.value === spec.design_url) return;
+                                                            await supabase.from('specifications').update({ design_url: e.target.value }).eq('id', spec.id);
+                                                            loadData();
+                                                        }}
+                                                    />
+                                                    {!spec.design_url && <div className="absolute -right-1 -top-1 w-3 h-3 bg-red-500 rounded-full border-2 border-white shadow-sm" />}
+                                                </div>
+                                                <span className={`px-3 py-1 text-xs font-bold rounded-full ${!spec.design_url ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'}`}>
+                                                    {spec.design_url ? 'In Revision' : 'Wartet auf Design'}
+                                                </span>
+                                            </div>
                                         </div>
-                                        <div className="flex items-center gap-4">
-                                            <input
-                                                type="text"
-                                                placeholder="Figma/Design URL..."
-                                                className="px-3 py-1 text-sm border border-slate-200 rounded-lg w-64"
-                                                defaultValue={spec.design_url || ''}
-                                                onBlur={async (e) => {
-                                                    await supabase.from('specifications').update({ design_url: e.target.value }).eq('id', spec.id);
-                                                    loadData();
-                                                }}
-                                            />
-                                            <span className="px-3 py-1 bg-amber-100 text-amber-700 text-xs font-bold rounded-full">In Arbeit</span>
-                                        </div>
-                                    </div>
-                                ))}
+                                    ))}
                                 <div className="bg-slate-50 px-6 py-2 text-xs font-bold text-slate-400 uppercase tracking-wider mt-4">Marktplatz (Börse)</div>
                                 {specifications.filter(s => s.released_to_dev).map(spec => (
                                     <div key={spec.id} className="px-6 py-4 flex items-center justify-between border-l-4 border-green-500">
