@@ -411,6 +411,11 @@ const Dashboard = () => {
                     )}
 
                     <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+                        {loadError && (
+                            <div className="p-4 bg-red-50 border-b border-red-100 text-red-600 text-sm flex items-center gap-2">
+                                <span className="font-bold">Fehler beim Laden:</span> {loadError}
+                            </div>
+                        )}
                         {isLoading ? (
                             <div className="p-12 text-center text-gray-500">Laden...</div>
                         ) : activeTab === 'leads' ? (
@@ -475,8 +480,10 @@ const Dashboard = () => {
                                 {specifications.filter(s => {
                                     if (!searchQuery) return true;
                                     const searchLower = searchQuery.toLowerCase();
-                                    return (s.project_number?.toLowerCase().includes(searchLower)) ||
-                                        (s.title?.toLowerCase().includes(searchLower));
+                                    const pNum = s.project_number || '';
+                                    const title = s.title || '';
+                                    return pNum.toLowerCase().includes(searchLower) ||
+                                        title.toLowerCase().includes(searchLower);
                                 }).map(spec => (
                                     <div key={spec.id} className="px-6 py-4 hover:bg-gray-50 transition-colors">
                                         <div className="flex items-start justify-between">
