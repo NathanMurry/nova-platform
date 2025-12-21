@@ -92,6 +92,10 @@ export interface Database {
                     desired_outcome: string | null;
                     status: 'draft' | 'review' | 'approved' | 'in_progress' | 'completed';
                     comments: Comment[] | null;
+                    design_url: string | null;
+                    is_design_paid: boolean;
+                    released_to_dev: boolean;
+                    dev_notes: string | null;
                     created_at: string;
                     updated_at: string | null;
                 };
@@ -109,6 +113,10 @@ export interface Database {
                     desired_outcome?: string | null;
                     status?: 'draft' | 'review' | 'approved' | 'in_progress' | 'completed';
                     comments?: Comment[] | null;
+                    design_url?: string | null;
+                    is_design_paid?: boolean;
+                    released_to_dev?: boolean;
+                    dev_notes?: string | null;
                     created_at?: string;
                     updated_at?: string;
                 };
@@ -123,6 +131,10 @@ export interface Database {
                     desired_outcome?: string | null;
                     status?: 'draft' | 'review' | 'approved' | 'in_progress' | 'completed';
                     comments?: Comment[];
+                    design_url?: string | null;
+                    is_design_paid?: boolean;
+                    released_to_dev?: boolean;
+                    dev_notes?: string | null;
                     updated_at?: string;
                 };
             };
@@ -263,6 +275,32 @@ export interface Database {
                     deployment_url?: string | null;
                     embedding?: string | null;
                     updated_at?: string;
+                };
+            };
+
+            // === NACHRICHTEN (SUPPORT) ===
+            messages: {
+                Row: {
+                    id: string;
+                    specification_id: string | null;
+                    sender_role: 'admin' | 'customer' | 'developer';
+                    receiver_role: 'admin' | 'customer' | 'developer';
+                    content: string;
+                    is_read: boolean;
+                    created_at: string;
+                };
+                Insert: {
+                    id?: string;
+                    specification_id?: string | null;
+                    sender_role: 'admin' | 'customer' | 'developer';
+                    receiver_role: 'admin' | 'customer' | 'developer';
+                    content: string;
+                    is_read?: boolean;
+                    created_at?: string;
+                };
+                Update: {
+                    content?: string;
+                    is_read?: boolean;
                 };
             };
         };

@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import {
     ArrowLeft,
     FileText,
-    MessageSquare,
     RefreshCw,
     ExternalLink,
     Clock,
