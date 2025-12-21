@@ -366,9 +366,11 @@ const LastenheftView = () => {
                                 <FileText className="w-5 h-5" />
                             </div>
                             <div>
-                                <h1 className="text-lg font-bold text-gray-900">Lastenheft</h1>
+                                <h1 className="text-lg font-bold text-gray-900">
+                                    Lastenheft {lastenheft.project_number && <span className="text-amber-600 ml-1">#{lastenheft.project_number}</span>}
+                                </h1>
                                 <p className="text-sm text-gray-500">
-                                    Erstellt am {new Date(lastenheft.created_at).toLocaleDateString('de-DE')}
+                                    {lastenheft.title} • {new Date(lastenheft.created_at).toLocaleDateString('de-DE')}
                                 </p>
                             </div>
                         </div>

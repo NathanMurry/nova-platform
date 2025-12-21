@@ -72,19 +72,25 @@ const Dashboard = () => {
         setIsLoading(true);
 
         try {
-            // 1. Gespräche laden
+            // 1. Gespräche laden (mit Projektnummer falls vorhanden)
             const { data: convData } = await supabase
                 .from('conversations')
-                .select('*')
-                .order('created_at', { ascending: false })
-                .limit(50);
-            setConversations(convData || []);
+                .select('*, specifications(project_number)')
+                .order('created_at', { ascending: false });
 
-            // 2. Lastenhefte laden
+            // Client-seitig nach Projektnummer sortieren (falls vorhanden)
+            const sortedByPNumber = (convData || []).sort((a: any, b: any) => {
+                const pA = a.specifications?.[0]?.project_number || 'ZZZ';
+                const pB = b.specifications?.[0]?.project_number || 'ZZZ';
+                return pA.localeCompare(pB);
+            });
+            setConversations(sortedByPNumber);
+
+            // 2. Lastenhefte laden und nach Projektnummer sortieren
             const { data: specData } = await supabase
                 .from('specifications')
                 .select('*')
-                .order('created_at', { ascending: false });
+                .order('project_number', { ascending: false });
             setSpecifications(specData || []);
 
             // 3. Support-Nachrichten laden
@@ -409,7 +415,9 @@ const Dashboard = () => {
                                                     </button>
                                                     <div>
                                                         <div className="flex items-center gap-2">
-                                                            <span className="font-semibold text-gray-900">#{conv.id.slice(0, 8)}</span>
+                                                            <span className="font-semibold text-gray-900">
+                                                                {(conv as any).specifications?.[0]?.project_number || `#${conv.id.slice(0, 8)}`}
+                                                            </span>
                                                             <span className="text-xs text-gray-400 font-mono">{formatDate(conv.created_at)}</span>
                                                             {getStatusBadge(conv.status)}
                                                         </div>
