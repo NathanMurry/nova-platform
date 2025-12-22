@@ -325,6 +325,8 @@ const Dashboard = () => {
                 return <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-medium">In Arbeit</span>;
             case 'completed':
                 return <span className="px-2 py-1 bg-emerald-100 text-emerald-700 rounded-full text-xs font-medium flex items-center gap-1"><CheckCircle className="w-3 h-3" /> Erledigt</span>;
+            case 'released':
+                return <span className="px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium flex items-center gap-1"><ExternalLink className="w-3 h-3" /> Gelistet</span>;
             default:
                 return <span className="px-2 py-1 bg-gray-100 text-gray-600 rounded-full text-xs font-medium">{status}</span>;
         }
@@ -584,8 +586,32 @@ const Dashboard = () => {
                                                         <span className="font-medium text-gray-900">{spec.title || 'Ohne Titel'}</span>
                                                         {spec.project_number && <span className="bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded text-xs font-mono">{spec.project_number}</span>}
                                                         {getStatusBadge(spec.status)}
+                                                        {spec.is_design_paid && !spec.design_url && <span className="px-2 py-0.5 bg-amber-100 text-amber-700 text-[10px] font-bold rounded">WARTE AUF ENTWRURF</span>}
                                                     </div>
-                                                    <p className="text-sm text-gray-500">{spec.problem_summary?.slice(0, 100)}...</p>
+                                                    <p className="text-sm text-gray-500 line-clamp-1">{spec.problem_summary}</p>
+                                                    {spec.is_design_paid && (
+                                                        <div className="mt-3 flex items-center gap-2">
+                                                            <div className="relative">
+                                                                <input
+                                                                    type="text"
+                                                                    placeholder="Entwurf URL (Figma, etc.)..."
+                                                                    className="px-3 py-1.5 text-xs border border-gray-200 rounded-lg w-64 focus:ring-2 focus:ring-amber-200 outline-none pr-8"
+                                                                    defaultValue={spec.design_url || ''}
+                                                                    onBlur={async (e) => {
+                                                                        if (e.target.value === spec.design_url) return;
+                                                                        await supabase.from('specifications').update({ design_url: e.target.value }).eq('id', spec.id);
+                                                                        loadData();
+                                                                    }}
+                                                                />
+                                                                {spec.design_url && <CheckCircle className="absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 text-green-500" />}
+                                                            </div>
+                                                            {spec.design_url && (
+                                                                <span className="text-[10px] text-green-600 font-bold flex items-center gap-1">
+                                                                    <CheckCircle className="w-3 h-3" /> Entwurf hinterlegt
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                    )}
                                                 </div>
                                                 <div className="flex items-center gap-2">
                                                     <button onClick={(e) => { e.stopPropagation(); handleOpenKnowledgeModal(spec); }} className="p-2 text-gray-400 hover:text-amber-500 hover:bg-amber-50 rounded-full transition-colors" title="In Wissensdatenbank aufnehmen">
@@ -616,12 +642,23 @@ const Dashboard = () => {
                                                     <div className="flex items-center gap-3">
                                                         <p className="text-sm text-slate-500">{spec.title}</p>
                                                         <button
-                                                            onClick={() => setActiveTab('specifications')}
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                setSearchQuery(spec.project_number || spec.id);
+                                                                setActiveTab('specifications');
+                                                            }}
                                                             className="text-[10px] text-amber-600 hover:text-amber-700 font-bold uppercase flex items-center gap-1 bg-amber-50 px-2 py-0.5 rounded transition-colors"
                                                             title="Lastenheft öffnen"
                                                         >
                                                             <FileText className="w-3 h-3" />
                                                             Lastenheft
+                                                        </button>
+                                                        <button
+                                                            onClick={(e) => { e.stopPropagation(); handleOpenKnowledgeModal(spec); }}
+                                                            className="p-1.5 text-gray-400 hover:text-amber-500 hover:bg-amber-50 rounded-full transition-colors"
+                                                            title="In Wissensdatenbank aufnehmen"
+                                                        >
+                                                            <Database className="w-4 h-4" />
                                                         </button>
                                                     </div>
                                                 </div>
