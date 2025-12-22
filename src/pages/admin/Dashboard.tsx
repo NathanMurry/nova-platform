@@ -567,7 +567,8 @@ const Dashboard = () => {
                                     const pNum = s.project_number || '';
                                     const title = s.title || '';
                                     return pNum.toLowerCase().includes(searchLower) ||
-                                        title.toLowerCase().includes(searchLower);
+                                        title.toLowerCase().includes(searchLower) ||
+                                        s.id.toLowerCase().includes(searchLower);
                                 }).length === 0 ? (
                                     <div className="p-12 text-center text-gray-500">Keine passenden Lastenhefte für "{searchQuery}".</div>
                                 ) : (
@@ -577,7 +578,8 @@ const Dashboard = () => {
                                         const pNum = s.project_number || '';
                                         const title = s.title || '';
                                         return pNum.toLowerCase().includes(searchLower) ||
-                                            title.toLowerCase().includes(searchLower);
+                                            title.toLowerCase().includes(searchLower) ||
+                                            s.id.toLowerCase().includes(searchLower);
                                     }).map(spec => (
                                         <div key={spec.id} className="px-6 py-4 hover:bg-gray-50 transition-colors">
                                             <div className="flex items-start justify-between">
