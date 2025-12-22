@@ -9,14 +9,12 @@ import {
     Database,
     X,
     Save,
-    Star,
     Sparkles,
     ChevronDown,
     ChevronUp,
     Trash2,
     LayoutDashboard,
     Target,
-    ShoppingCart,
     Inbox,
     Search,
     User,
@@ -175,23 +173,6 @@ const Dashboard = () => {
         setIsLoading(false);
     };
 
-    const toggleReference = async (id: string, currentStatus: boolean) => {
-        try {
-            const { error } = await supabase
-                .from('conversations')
-                .update({ is_reference: !currentStatus })
-                .eq('id', id);
-
-            if (error) throw error;
-
-            // Lokalen State aktualisieren
-            setConversations(prev => prev.map(c =>
-                c.id === id ? { ...c, is_reference: !currentStatus } : c
-            ));
-        } catch (err: any) {
-            alert('Fehler beim Markieren: ' + err.message);
-        }
-    };
 
     const [isExtracting, setIsExtracting] = useState(false);
 
