@@ -126,7 +126,10 @@ const ChatBot = () => {
 
             const { error } = await supabase
                 .from('conversations')
-                .update({ messages: formattedMessages })
+                .update({
+                    messages: formattedMessages,
+                    last_activity_at: new Date().toISOString()
+                })
                 .eq('id', conversationId);
 
             if (!error) {
@@ -233,6 +236,15 @@ const ChatBot = () => {
                 const lastenheftId = await saveLastenheft(currentId, lastenheft);
 
                 if (lastenheftId) {
+                    // Status auf 'completed' setzen
+                    await supabase
+                        .from('conversations')
+                        .update({
+                            status: 'completed',
+                            last_activity_at: new Date().toISOString()
+                        })
+                        .eq('id', currentId);
+
                     // Zur Lastenheft-Ansicht navigieren
                     navigate(`/lastenheft/${lastenheftId}`);
                 } else {

@@ -40,8 +40,10 @@ CREATE TABLE IF NOT EXISTS conversations (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     entrepreneur_id UUID REFERENCES entrepreneurs(id) ON DELETE CASCADE,
     messages JSONB DEFAULT '[]'::jsonb, -- Array von {type, content, timestamp, suggestions}
-    status TEXT DEFAULT 'active' CHECK (status IN ('active', 'completed', 'abandoned')),
+    status TEXT DEFAULT 'active' CHECK (status IN ('active', 'completed', 'project', 'archived')),
     is_reference BOOLEAN DEFAULT FALSE,
+    last_activity_at TIMESTAMPTZ DEFAULT NOW(),
+    archive_reason_status TEXT, -- Speichert den Status vor der Archivierung
     created_at TIMESTAMPTZ DEFAULT NOW(),
     completed_at TIMESTAMPTZ
 );
@@ -324,3 +326,24 @@ CREATE POLICY "Allow insert for all messages" ON messages
 -- Führe diese im Supabase Dashboard unter Storage aus:
 -- INSERT INTO storage.buckets (id, name, public) VALUES ('drafts', 'drafts', true);
 -- INSERT INTO storage.buckets (id, name, public) VALUES ('documents', 'documents', false);
+-- =====================================================
+-- 8. AUTOMATISCHE ARCHIVIERUNG (3 TAGE INAKTIVITÄT)
+-- =====================================================
+
+-- Funktion zur Archivierung inaktiver Gespräche
+CREATE OR REPLACE FUNCTION archive_inactive_conversations()
+RETURNS void AS $$
+BEGIN
+    UPDATE conversations
+    SET 
+        archive_reason_status = status,
+        status = 'archived'
+    WHERE 
+        status NOT IN ('archived', 'project') -- Projekte werden nie automatisch archiviert
+        AND last_activity_at < NOW() - INTERVAL '3 days';
+END;
+$$ LANGUAGE plpgsql;
+
+-- Hinweis: Um dies automatisch auszuführen, muss in Supabase ein Cron-Job (pg_cron) 
+-- oder ein Edge Function Scheduler eingerichtet werden:
+-- SELECT cron.schedule('0 0 * * *', 'SELECT archive_inactive_conversations();');

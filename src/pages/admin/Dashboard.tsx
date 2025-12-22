@@ -20,7 +20,8 @@ import {
     Inbox,
     Search,
     User,
-    CreditCard
+    CreditCard,
+    Archive
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
@@ -31,9 +32,12 @@ interface Conversation {
     id: string;
     entrepreneur_id: string | null;
     messages: any[];
-    status: string;
+    status: 'active' | 'completed' | 'project' | 'archived';
     is_reference: boolean;
+    last_activity_at: string;
+    archive_reason_status: string | null;
     created_at: string;
+    specifications?: any[];
 }
 
 const Dashboard = () => {
@@ -47,6 +51,7 @@ const Dashboard = () => {
     const [stats, setStats] = useState({
         totalConversations: 0,
         activeConversations: 0,
+        projectConversations: 0,
         totalSpecifications: 0,
         approvedSpecifications: 0,
         paidDesigns: 0,
@@ -145,6 +150,7 @@ const Dashboard = () => {
             const results = await Promise.all([
                 supabase.from('conversations').select('*', { count: 'exact', head: true }),
                 supabase.from('conversations').select('*', { count: 'exact', head: true }).eq('status', 'active'),
+                supabase.from('conversations').select('*', { count: 'exact', head: true }).eq('status', 'project'),
                 supabase.from('specifications').select('*', { count: 'exact', head: true }),
                 supabase.from('specifications').select('*', { count: 'exact', head: true }).eq('status', 'approved'),
                 supabase.from('specifications').select('*', { count: 'exact', head: true }).eq('is_design_paid', true)
@@ -153,10 +159,11 @@ const Dashboard = () => {
             setStats({
                 totalConversations: results[0].count || 0,
                 activeConversations: results[1].count || 0,
-                totalSpecifications: results[2].count || 0,
-                approvedSpecifications: results[3].count || 0,
-                paidDesigns: results[4].count || 0,
-                revenue: (results[4].count || 0) * 199
+                projectConversations: results[2].count || 0,
+                totalSpecifications: results[3].count || 0,
+                approvedSpecifications: results[4].count || 0,
+                paidDesigns: results[5].count || 0,
+                revenue: (results[5].count || 0) * 199
             });
         } catch (err: any) {
             console.warn('Stats/Support Error:', err);
@@ -205,6 +212,25 @@ const Dashboard = () => {
             }));
         } catch (err: any) {
             alert('Fehler beim Löschen: ' + err.message);
+        }
+    };
+
+    const handleArchiveConversation = async (id: string, currentStatus: string) => {
+        if (!window.confirm('Möchtest du dieses Gespräch wirklich archivieren?')) return;
+        try {
+            const { error } = await supabase
+                .from('conversations')
+                .update({
+                    status: 'archived',
+                    archive_reason_status: currentStatus,
+                    last_activity_at: new Date().toISOString()
+                })
+                .eq('id', id);
+
+            if (error) throw error;
+            loadData();
+        } catch (err: any) {
+            alert('Fehler beim Archivieren: ' + err.message);
         }
     };
 
@@ -282,18 +308,39 @@ const Dashboard = () => {
     };
 
 
+    const getConvStatusBadge = (conv: Conversation) => {
+        if (conv.status === 'archived') {
+            let reason = 'Archiviert';
+            if (conv.archive_reason_status === 'completed') reason = 'Archiviert (Erledigt)';
+            if (conv.archive_reason_status === 'active') reason = 'Archiviert (Unabgeschl.)';
+            if (conv.archive_reason_status === 'project') reason = 'Archiviert (Projekt)';
+            return <span className="px-2 py-0.5 bg-gray-100 text-gray-500 rounded text-[10px] font-bold uppercase">{reason}</span>;
+        }
+
+        switch (conv.status) {
+            case 'active':
+                return <span className="px-2 py-0.5 bg-blue-100 text-blue-700 rounded text-[10px] font-bold uppercase tracking-wider flex items-center gap-1"><Clock className="w-3 h-3" /> Aktiv</span>;
+            case 'completed':
+                return <span className="px-2 py-0.5 bg-green-100 text-green-700 rounded text-[10px] font-bold uppercase tracking-wider flex items-center gap-1"><CheckCircle className="w-3 h-3" /> Lastenheft Erstellt</span>;
+            case 'project':
+                return <span className="px-2 py-0.5 bg-purple-100 text-purple-700 rounded text-[10px] font-bold uppercase tracking-wider flex items-center gap-1"><Target className="w-3 h-3" /> Projekt-Interesse</span>;
+            default:
+                return <span className="px-2 py-0.5 bg-gray-100 text-gray-700 rounded text-[10px] font-bold uppercase tracking-wider">{conv.status}</span>;
+        }
+    };
+
     const getStatusBadge = (status: string) => {
         switch (status) {
-            case 'active':
-                return <span className="px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium flex items-center gap-1"><Clock className="w-3 h-3" /> Aktiv</span>;
-            case 'completed':
-                return <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-medium flex items-center gap-1"><CheckCircle className="w-3 h-3" /> Abgeschlossen</span>;
             case 'draft':
                 return <span className="px-2 py-1 bg-gray-100 text-gray-600 rounded-full text-xs font-medium">Entwurf</span>;
             case 'approved':
                 return <span className="px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium flex items-center gap-1"><CheckCircle className="w-3 h-3" /> Freigegeben</span>;
             case 'review':
                 return <span className="px-2 py-1 bg-amber-100 text-amber-700 rounded-full text-xs font-medium">In Prüfung</span>;
+            case 'in_progress':
+                return <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-medium">In Arbeit</span>;
+            case 'completed':
+                return <span className="px-2 py-1 bg-emerald-100 text-emerald-700 rounded-full text-xs font-medium flex items-center gap-1"><CheckCircle className="w-3 h-3" /> Erledigt</span>;
             default:
                 return <span className="px-2 py-1 bg-gray-100 text-gray-600 rounded-full text-xs font-medium">{status}</span>;
         }
@@ -398,7 +445,7 @@ const Dashboard = () => {
 
                     {activeTab === 'overview' && (
                         <div className="space-y-8">
-                            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                            <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
                                 <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
                                     <div className="flex items-center gap-3 text-slate-500 mb-2">
                                         <ShoppingCart className="w-4 h-4" />
@@ -406,26 +453,33 @@ const Dashboard = () => {
                                     </div>
                                     <p className="text-3xl font-bold text-slate-900">{stats.paidDesigns}</p>
                                 </div>
-                                <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                                <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 border-l-4 border-l-green-500">
                                     <div className="flex items-center gap-3 text-green-600 mb-2">
                                         <CreditCard className="w-4 h-4" />
-                                        <p className="text-xs uppercase font-semibold">Umsatz (Dummy)</p>
+                                        <p className="text-xs uppercase font-semibold text-green-600">Umsatz</p>
                                     </div>
                                     <p className="text-3xl font-bold text-slate-900">{stats.revenue} €</p>
                                 </div>
                                 <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-                                    <div className="flex items-center gap-3 text-amber-500 mb-2">
-                                        <User className="w-4 h-4" />
-                                        <p className="text-xs uppercase font-semibold">Leads Gesamt</p>
+                                    <div className="flex items-center gap-3 text-purple-600 mb-2">
+                                        <Target className="w-4 h-4" />
+                                        <p className="text-xs uppercase font-semibold">Projekt-Interesse</p>
                                     </div>
-                                    <p className="text-3xl font-bold text-slate-900">{stats.totalConversations}</p>
+                                    <p className="text-3xl font-bold text-slate-900">{stats.projectConversations}</p>
                                 </div>
                                 <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
                                     <div className="flex items-center gap-3 text-blue-500 mb-2">
-                                        <CheckCircle className="w-4 h-4" />
-                                        <p className="text-xs uppercase font-semibold">Freigegeben</p>
+                                        <Inbox className="w-4 h-4" />
+                                        <p className="text-xs uppercase font-semibold text-blue-500">Leads Aktiv</p>
                                     </div>
-                                    <p className="text-3xl font-bold text-slate-900">{stats.approvedSpecifications}</p>
+                                    <p className="text-3xl font-bold text-slate-900">{stats.activeConversations}</p>
+                                </div>
+                                <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                                    <div className="flex items-center gap-3 text-gray-400 mb-2">
+                                        <CheckCircle className="w-4 h-4" />
+                                        <p className="text-xs uppercase font-semibold">Lastenhefte</p>
+                                    </div>
+                                    <p className="text-3xl font-bold text-slate-900">{stats.totalSpecifications}</p>
                                 </div>
                             </div>
                         </div>
@@ -458,22 +512,28 @@ const Dashboard = () => {
                                         <div key={conv.id} className="border-b border-gray-100 last:border-0 hover:bg-gray-50 transition-colors">
                                             <div className="px-6 py-4 flex items-center justify-between cursor-pointer" onClick={() => setExpandedConvId(expandedConvId === conv.id ? null : conv.id)}>
                                                 <div className="flex items-center gap-4">
-                                                    <button onClick={(e) => { e.stopPropagation(); toggleReference(conv.id, !!conv.is_reference); }} className={`p-1.5 rounded-full transition-colors ${conv.is_reference ? 'text-amber-500 bg-amber-50' : 'text-gray-300 hover:text-amber-400'}`}>
-                                                        <Star className={`w-5 h-5 ${conv.is_reference ? 'fill-current' : ''}`} />
-                                                    </button>
                                                     <div>
                                                         <div className="flex items-center gap-2">
                                                             <span className="font-semibold text-gray-900">
                                                                 {(conv as any).specifications?.[0]?.project_number || `#${conv.id.slice(0, 8)}`}
                                                             </span>
                                                             <span className="text-xs text-gray-400 font-mono">{formatDate(conv.created_at)}</span>
-                                                            {getStatusBadge(conv.status)}
+                                                            {getConvStatusBadge(conv)}
                                                         </div>
                                                         <p className="text-sm text-gray-500 mt-0.5 truncate max-w-md">{getConversationPreview(conv.messages)}</p>
                                                     </div>
                                                 </div>
                                                 <div className="flex items-center gap-3">
-                                                    <button onClick={(e) => handleDeleteConversation(e, conv.id)} className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-full transition-colors">
+                                                    {conv.status !== 'archived' && (
+                                                        <button
+                                                            onClick={(e) => { e.stopPropagation(); handleArchiveConversation(conv.id, conv.status); }}
+                                                            className="p-1.5 text-gray-400 hover:text-amber-600 hover:bg-amber-50 rounded-full transition-colors"
+                                                            title="Archivieren"
+                                                        >
+                                                            <Archive className="w-4 h-4" />
+                                                        </button>
+                                                    )}
+                                                    <button onClick={(e) => handleDeleteConversation(e, conv.id)} className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-full transition-colors" title="Löschen">
                                                         <Trash2 className="w-4 h-4" />
                                                     </button>
                                                     {expandedConvId === conv.id ? <ChevronUp className="w-5 h-5 text-gray-400" /> : <ChevronDown className="w-5 h-5 text-gray-400" />}

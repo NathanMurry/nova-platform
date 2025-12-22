@@ -54,8 +54,10 @@ export interface Database {
                     id: string;
                     entrepreneur_id: string | null;
                     messages: ConversationMessage[];
-                    status: 'active' | 'completed' | 'abandoned';
+                    status: 'active' | 'completed' | 'project' | 'archived';
                     is_reference: boolean;
+                    last_activity_at: string;
+                    archive_reason_status: string | null;
                     created_at: string;
                     completed_at: string | null;
                 };
@@ -63,15 +65,19 @@ export interface Database {
                     id?: string;
                     entrepreneur_id?: string | null;
                     messages?: ConversationMessage[];
-                    status?: 'active' | 'completed' | 'abandoned';
+                    status?: 'active' | 'completed' | 'project' | 'archived';
                     is_reference?: boolean;
+                    last_activity_at?: string;
+                    archive_reason_status?: string | null;
                     created_at?: string;
                     completed_at?: string | null;
                 };
                 Update: {
                     messages?: ConversationMessage[];
-                    status?: 'active' | 'completed' | 'abandoned';
+                    status?: 'active' | 'completed' | 'project' | 'archived';
                     is_reference?: boolean;
+                    last_activity_at?: string;
+                    archive_reason_status?: string | null;
                     completed_at?: string | null;
                 };
             };

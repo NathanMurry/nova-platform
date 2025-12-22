@@ -183,6 +183,18 @@ const LastenheftView = () => {
 
             if (error) throw error;
             setLastenheft(data as LastenheftData);
+
+            // Verlinkte Konversation auf 'project' setzen
+            if (data.conversation_id) {
+                await supabase
+                    .from('conversations')
+                    .update({
+                        status: 'project',
+                        last_activity_at: new Date().toISOString()
+                    })
+                    .eq('id', data.conversation_id);
+            }
+
             setShowOfferModal(true);
         } catch (err) {
             alert('Fehler bei der Bestellung');
