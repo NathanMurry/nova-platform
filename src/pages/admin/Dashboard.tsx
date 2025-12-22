@@ -53,8 +53,9 @@ const Dashboard = () => {
         activeConversations: 0,
         projectConversations: 0,
         totalSpecifications: 0,
-        approvedSpecifications: 0,
-        paidDesigns: 0,
+        paidProjects: 0,
+        designedProjects: 0,
+        listedProjects: 0,
         revenue: 0
     });
 
@@ -150,20 +151,22 @@ const Dashboard = () => {
             const results = await Promise.all([
                 supabase.from('conversations').select('*', { count: 'exact', head: true }),
                 supabase.from('conversations').select('*', { count: 'exact', head: true }).eq('status', 'active'),
-                supabase.from('conversations').select('*', { count: 'exact', head: true }).eq('status', 'project'),
                 supabase.from('specifications').select('*', { count: 'exact', head: true }),
-                supabase.from('specifications').select('*', { count: 'exact', head: true }).eq('status', 'approved'),
+                supabase.from('specifications').select('*', { count: 'exact', head: true }).eq('is_design_paid', true).is('design_url', null),
+                supabase.from('specifications').select('*', { count: 'exact', head: true }).not('design_url', 'is', null).eq('released_to_dev', false),
+                supabase.from('specifications').select('*', { count: 'exact', head: true }).eq('released_to_dev', true),
                 supabase.from('specifications').select('*', { count: 'exact', head: true }).eq('is_design_paid', true)
             ]);
 
             setStats({
                 totalConversations: results[0].count || 0,
                 activeConversations: results[1].count || 0,
-                projectConversations: results[2].count || 0,
-                totalSpecifications: results[3].count || 0,
-                approvedSpecifications: results[4].count || 0,
-                paidDesigns: results[5].count || 0,
-                revenue: (results[5].count || 0) * 199
+                projectConversations: 0, // Not used in summary anymore
+                totalSpecifications: results[2].count || 0,
+                paidProjects: results[3].count || 0,
+                designedProjects: results[4].count || 0,
+                listedProjects: results[5].count || 0,
+                revenue: (results[6].count || 0) * 199
             });
         } catch (err: any) {
             console.warn('Stats/Support Error:', err);
@@ -311,8 +314,8 @@ const Dashboard = () => {
     const getConvStatusBadge = (conv: Conversation) => {
         if (conv.status === 'archived') {
             let reason = 'Archiviert';
-            if (conv.archive_reason_status === 'completed') reason = 'Archiviert (Erledigt)';
-            if (conv.archive_reason_status === 'active') reason = 'Archiviert (Unabgeschl.)';
+            if (conv.archive_reason_status === 'completed') reason = 'Archiviert (Abgeschlossen)';
+            if (conv.archive_reason_status === 'active') reason = 'Archiviert (Abgebrochen)';
             if (conv.archive_reason_status === 'project') reason = 'Archiviert (Projekt)';
             return <span className="px-2 py-0.5 bg-gray-100 text-gray-500 rounded text-[10px] font-bold uppercase">{reason}</span>;
         }
@@ -447,40 +450,51 @@ const Dashboard = () => {
                         <div className="space-y-8">
                             <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
                                 <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-                                    <div className="flex items-center gap-3 text-slate-500 mb-2">
-                                        <ShoppingCart className="w-4 h-4" />
-                                        <p className="text-xs uppercase font-semibold">Designs Verkauft</p>
-                                    </div>
-                                    <p className="text-3xl font-bold text-slate-900">{stats.paidDesigns}</p>
-                                </div>
-                                <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 border-l-4 border-l-green-500">
-                                    <div className="flex items-center gap-3 text-green-600 mb-2">
-                                        <CreditCard className="w-4 h-4" />
-                                        <p className="text-xs uppercase font-semibold text-green-600">Umsatz</p>
-                                    </div>
-                                    <p className="text-3xl font-bold text-slate-900">{stats.revenue} €</p>
-                                </div>
-                                <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-                                    <div className="flex items-center gap-3 text-purple-600 mb-2">
-                                        <Target className="w-4 h-4" />
-                                        <p className="text-xs uppercase font-semibold">Projekt-Interesse</p>
-                                    </div>
-                                    <p className="text-3xl font-bold text-slate-900">{stats.projectConversations}</p>
-                                </div>
-                                <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
                                     <div className="flex items-center gap-3 text-blue-500 mb-2">
                                         <Inbox className="w-4 h-4" />
-                                        <p className="text-xs uppercase font-semibold text-blue-500">Leads Aktiv</p>
+                                        <p className="text-xs uppercase font-semibold">Offene Gespräche</p>
                                     </div>
                                     <p className="text-3xl font-bold text-slate-900">{stats.activeConversations}</p>
                                 </div>
                                 <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
                                     <div className="flex items-center gap-3 text-gray-400 mb-2">
-                                        <CheckCircle className="w-4 h-4" />
+                                        <FileText className="w-4 h-4" />
                                         <p className="text-xs uppercase font-semibold">Lastenhefte</p>
                                     </div>
                                     <p className="text-3xl font-bold text-slate-900">{stats.totalSpecifications}</p>
                                 </div>
+                                <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 border-l-4 border-l-amber-500">
+                                    <div className="flex items-center gap-3 text-amber-600 mb-2">
+                                        <CreditCard className="w-4 h-4" />
+                                        <p className="text-xs uppercase font-semibold">Bezahlte Projekte</p>
+                                    </div>
+                                    <p className="text-3xl font-bold text-slate-900">{stats.paidProjects}</p>
+                                    <p className="text-[10px] text-amber-500 mt-1 font-medium">Warte auf Entwurf</p>
+                                </div>
+                                <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 border-l-4 border-l-purple-500">
+                                    <div className="flex items-center gap-3 text-purple-600 mb-2">
+                                        <Target className="w-4 h-4" />
+                                        <p className="text-xs uppercase font-semibold">Entwurf bereit</p>
+                                    </div>
+                                    <p className="text-3xl font-bold text-slate-900">{stats.designedProjects}</p>
+                                    <p className="text-[10px] text-purple-500 mt-1 font-medium">Warte auf Freigabe</p>
+                                </div>
+                                <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 border-l-4 border-l-green-500">
+                                    <div className="flex items-center gap-3 text-green-600 mb-2">
+                                        <CheckCircle className="w-4 h-4" />
+                                        <p className="text-xs uppercase font-semibold">Gelistete Projekte</p>
+                                    </div>
+                                    <p className="text-3xl font-bold text-slate-900">{stats.listedProjects}</p>
+                                    <p className="text-[10px] text-green-500 mt-1 font-medium">Auf Börse sichtbar</p>
+                                </div>
+                            </div>
+
+                            <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                                <div className="flex items-center gap-3 text-green-600 mb-2">
+                                    <CreditCard className="w-5 h-5" />
+                                    <p className="text-sm uppercase font-bold tracking-tight">Gesamtumsatz (Entwürfe)</p>
+                                </div>
+                                <p className="text-4xl font-black text-slate-900">{stats.revenue} €</p>
                             </div>
                         </div>
                     )}
@@ -501,7 +515,7 @@ const Dashboard = () => {
                                     return c.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
                                         pNum.toLowerCase().includes(searchQuery.toLowerCase());
                                 }).length === 0 ? (
-                                    <div className="p-12 text-center text-gray-500">Keine passenden Leads gefunden.</div>
+                                    <div className="p-12 text-center text-gray-500">Keine passenden Gespräche gefunden.</div>
                                 ) : (
                                     conversations.filter(c => {
                                         if (!searchQuery) return true;

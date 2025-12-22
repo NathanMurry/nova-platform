@@ -334,13 +334,25 @@ CREATE POLICY "Allow insert for all messages" ON messages
 CREATE OR REPLACE FUNCTION archive_inactive_conversations()
 RETURNS void AS $$
 BEGIN
+    -- 1. Aktive Gespräche nach 24 Stunden archivieren
     UPDATE conversations
     SET 
-        archive_reason_status = status,
+        archive_reason_status = 'active',
         status = 'archived'
     WHERE 
-        status NOT IN ('archived', 'project') -- Projekte werden nie automatisch archiviert
-        AND last_activity_at < NOW() - INTERVAL '3 days';
+        status = 'active'
+        AND last_activity_at < NOW() - INTERVAL '24 hours';
+
+    -- 2. Abgeschlossene Gespräche after 1 Woche archivieren
+    UPDATE conversations
+    SET 
+        archive_reason_status = 'completed',
+        status = 'archived'
+    WHERE 
+        status = 'completed'
+        AND last_activity_at < NOW() - INTERVAL '7 days';
+    
+    -- Status 'project' wird ignoriert (kein automatisches Archiv)
 END;
 $$ LANGUAGE plpgsql;
 
